@@ -18,7 +18,7 @@ https://wow.curseforge.com/projects/project-2800
 QuickHeal uses the incoming heal information broadcasted by HealComm (Luna unit Frames), through the addonchannel to reduce overhealing and making this addon used by multiple raidmembers more effective.
 
 ## Installation
-- Download QuickHeal from this repository into your Interface folder and remove the "-master" in the folder name
+- Download QuickHeal from this repository into your Interface folder and remove the "-main" in the folder name
 - Download HealComm or Luna unit Frames: https://github.com/Aviana/LunaUnitFrames
 - Download Bonusscanner (Makes QhickHeal and HealComm (Luna unit Frames) more accurate by taking gear and +Heal into account: http://www.vanilla-addons.com/dls/bonusscanner/
 
