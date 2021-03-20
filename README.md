@@ -1,7 +1,7 @@
 
-# QuickHeal v1.14.5
+# QuickHeal v1.16
 
-QuickHeal for Turtle WoW 1.15.0
+QuickHeal for Turtle WoW
 
 QuickHeal gives healers fast access to all of their direct healing spells for healing party/raid members and themselves. It lets you heal the people who need it, without having to target them manually, or even having to deselect the enemy you're fighting. It gives maximum mana efficiency, and will automatically use a lower rank of healing if the target doesn't need your biggest heal, or if your mana is running low. This also works when not in a party or a raid, and this will save you mana and precious time by automatically selecting the healing spell that does the necessary healing. There are several different key bindings for narrowing the group of people that will be considered for healing.
 
@@ -76,6 +76,17 @@ Only considers targets that are in the tank group, which is defined by populatin
 ![Imgur](https://i.imgur.com/BVmvcHD.png?1)
 
 `+` adds current target into the list.  `C` clears the list.
+
+** Additional Functions (priest class only at this time) **
+
+/script SmartRenew();
+  ..applies max rank renew to any player w/o renew AND < 100% health
+
+/script SmartRenewThrottle();
+  ..applies downranked renew to any player w/o renew AND < 100% health
+  
+/script SmartRenewFirehose();
+  ..applies max rank renew to any player w/o renew
 
 ## ChangeLog:
 **1.14.5**<Br>
