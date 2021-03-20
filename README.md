@@ -94,3 +94,8 @@ Disabled vestigial config UI tab 'Target Filtering'
 Fixed lua error messages that were being generated from bad OnEnter syntax in QuickHeal.xml:1620:FilterRaidGroup1-8
 Revised readme.md
 <hr>
+  
+**1.16**<Br>
+Added functions SmartHeal(), SmartHealFirehose() and SmartHealThrottle().
+Revised readme.md
+<hr>
