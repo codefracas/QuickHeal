@@ -15,7 +15,7 @@
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../QuickHeal" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
   </component>
   <component name="WindowStateProjectService">
     <state x="4901" y="456" key="FileChooserDialogImpl" timestamp="1613075541145">
@@ -28,7 +28,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="lua-line">
           <url>file://$PROJECT_DIR$/QuickHeal.lua</url>
-          <line>1060</line>
+          <line>1353</line>
           <option name="timeStamp" value="1" />
         </line-breakpoint>
       </breakpoints>

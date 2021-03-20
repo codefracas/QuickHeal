@@ -120,6 +120,301 @@ end
 
 --[ JGP UI Modifications ]--
 
+function jgpprint(a)
+    DEFAULT_CHAT_FRAME:AddMessage("|cff69ccf0[DEBUG] |cffffffff" .. a)
+end
+
+-- Applies highest rank renew on next party/raidmember that does not have renew
+-- regardless of their hp level
+function SmartRenewFirehose()
+    local BRenew = 'Interface\\Icons\\Spell_Holy_Renew'
+    local hasRenew = false
+    local tlt = false
+    local name
+    for i = 1, GetNumRaidMembers() do
+        hasRenew = false
+        if not UnitIsDead("raid" .. i) and UnitIsConnected("raid" .. i) and
+                UnitIsVisible("raid" .. i) and CheckInteractDistance("raid" .. i, 4) and
+                UnitLevel("raid" .. i) >= 55 and UnitExists("raid" .. i) then
+            for j = 1, 40 do
+                local B = UnitBuff("raid" .. i, j);
+                if B then
+                    if B == BRenew then
+                        hasRenew = true
+                        break
+                    end
+                end
+            end
+
+            if not hasRenew then
+
+                -- If you have a target, store it
+                if UnitExists('target') then
+                    name = UnitName("target");
+                    tlt = true;
+                end
+
+                TargetUnit("raid" .. i)
+                --TargetByName("Yertle")
+                CastSpellByName('Renew')
+
+                -- Restore previous target, clear if you had no target
+                if tlt then
+                    TargetLastTarget();
+                else
+                    ClearTarget();
+                end
+
+                break
+            end
+        end
+    end
+end
+
+-- Applies highest rank renew on next party/raidmember that does not have renew
+-- if they are not @100% health
+function SmartRenew()
+    local needRenew, lowest_unit, name
+    local tlt = false
+    -- Find a candidate target for healy-poo
+    needRenew, lowest_unit = FindRenewTarget(false)
+
+    -- If you have a target, store it
+    if UnitExists('target') then
+        name = UnitName("target");
+        tlt = true;
+    end
+
+    -- Cast max Renew rank
+    if needRenew then
+        TargetUnit(lowest_unit);
+        CastSpellByName("Renew")
+    end
+
+    -- Restore previous target, clear if you had no target
+    if tlt and needRenew then
+        TargetLastTarget();
+    else
+        ClearTarget();
+    end
+end
+
+-- Applies downranked renew on next party/raidmember that does not have renew
+-- if they are not @100% health
+function SmartRenewThrottle()
+    local needRenew, lowest_unit, name
+    local tlt = false
+
+    -- Find a candidate target for healy-poo
+    needRenew, lowest_unit = FindRenewTarget(false)
+
+    -- If you have a target, store it
+    if UnitExists('target') then
+        name = UnitName("target");
+        tlt = true;
+    end
+
+    -- Cast max Renew rank
+    if needRenew then
+        TargetUnit(lowest_unit);
+        TheoryCraftCast("Renew")
+    end
+
+    -- Restore previous target, clear if you had no target
+    if tlt and needRenew then
+        TargetLastTarget();
+    else
+        ClearTarget();
+    end
+end
+
+-- TESTING
+function SmartRenewScratch(force)
+    local needRenew, lowest_unit
+    needRenew, lowest_unit = FindRenewTarget(force)
+    if force then
+        -- Cast max Renew rank if force is invoked
+        if needRenew then
+            TargetUnit(lowest_unit);
+            CastSpellByName("Renew")
+            TargetUnit("playertarget")
+        end
+    else
+        -- Throttle using TheoryCraftCast if topping off player
+        if needRenew then
+            TargetUnit(lowest_unit);
+            TheoryCraftCast("Renew")
+            TargetUnit("playertarget")
+        end
+    end
+end
+
+function FindRenewTarget(force)
+    local hasRenew = false
+    local needRenew = false
+    local target = "player"
+    local max_difference = 0
+    local new_difference = 0
+    local lowest_unit = "player"
+
+    if InRaid() then
+        if not force then
+            -- Evaluate raidmembers for throttled renew topoff
+            for i = 1, GetNumRaidMembers() do
+                target = "raid" .. i
+                if not UnitIsDead(target) and UnitIsConnected(target) and
+                        UnitIsVisible(target) and CheckInteractDistance(target, 4) and
+                        UnitLevel(target) >= 55 and UnitExists(target) then
+                    new_difference = (UnitHealthMax(target) - UnitHealth(target))
+                    if (new_difference > max_difference) then
+                        if not UnitHasRenew(target) then
+                            lowest_unit = target
+                            needRenew = true
+                        end
+                        max_difference = new_difference
+                    end
+                end
+            end
+            return needRenew, lowest_unit--, max_difference
+        else
+            -- Evaluate raidmembers for max renew rank
+            for i = 1, GetNumRaidMembers() do
+                target = "raid" .. i
+
+                if not UnitIsDead(target) and UnitIsConnected(target) and
+                        UnitIsVisible(target) and CheckInteractDistance(target, 4) and
+                        UnitLevel(target) >= 55 and UnitExists(target) then
+                    if not UnitHasRenew(target) then
+                        lowest_unit = "raid" .. i
+                        needRenew = true
+                        --break
+                    end
+                end
+            end
+            return needRenew, lowest_unit
+        end
+    end
+
+    if InParty() then
+        if not force then
+            -- Evaluate partymembers for throttled renew topoff
+            for i = 1, GetNumPartyMembers() do
+                target = "party" .. i
+                if not UnitIsDead(target) and UnitIsConnected(target) and UnitIsVisible(target) and CheckInteractDistance(target, 4) and UnitLevel(target) >= 55 and UnitExists(target) then
+                    new_difference = (UnitHealthMax(target) - UnitHealth(target))
+                    if (new_difference > max_difference) then
+                        if not UnitHasRenew(target) then
+                            lowest_unit = target
+                            needRenew = true
+                        end
+                        max_difference = new_difference
+                    end
+                end
+            end
+
+            -- Evaluate yourself for throttled renew topoff
+            new_difference = (UnitHealthMax("player") - UnitHealth("player"))
+            if (new_difference > max_difference) then
+                if not UnitHasRenew("player") then
+                    lowest_unit = "player"
+                    needRenew = true
+                end
+                max_difference = new_difference
+            end
+
+            return needRenew, lowest_unit
+        else
+            -- Evaluate partymembers for max renew rank
+            for i = 1, GetNumPartyMembers() do
+                hasRenew = false
+                if not UnitIsDead("party" .. i) and UnitIsConnected("party" .. i) and
+                        UnitIsVisible("party" .. i) and CheckInteractDistance("party" .. i, 4) and
+                        UnitLevel("party" .. i) >= 55 and UnitExists("party" .. i) then
+                    if not UnitHasRenew("party" .. i) then
+                        lowest_unit = "party" .. i
+                        needRenew = true
+                        --CastSpellByName('Renew')
+                        break
+                    end
+                end
+            end
+
+            -- Evaluate yourself for max renew rank
+            if not UnitHasRenew("player") then
+                lowest_unit = "player"
+                needRenew = true
+            end
+
+            return needRenew, lowest_unit
+        end
+    end
+
+    if AmSolo then
+        if not force then
+            if (UnitHealthMax("player") - UnitHealth("player") > 0) and not UnitHasRenew("player")  then
+                lowest_unit = "player"
+                needRenew = true
+            end
+        else
+            if not UnitHasRenew("player") then
+                lowest_unit = "player"
+                needRenew = true
+            end
+        end
+        return needRenew, lowest_unit
+    end
+end
+
+function UnitFullName(unit)
+    local name, server = UnitName(unit);
+    if server and type(server) == "string" and type(name) == "string" then
+        return name .. " of " .. server;
+    else
+        return name;
+    end
+end
+
+-- Returns true if unit has Renew buff
+function UnitHasRenew(unit)
+    local BRenew = 'Interface\\Icons\\Spell_Holy_Renew'
+    for j = 1, 40 do
+        local B = UnitBuff(unit, j);
+        if B then
+            if B == BRenew then
+                return true
+                --break
+            end
+        end
+    end
+    return false
+end
+
+-- Returns true if the player is in a raid group
+function InRaid()
+    return (GroupstatusInt() == 2);
+end
+
+-- Returns true if the player is in a party or a raid
+function InParty()
+    return (GroupstatusInt() == 1);
+end
+
+-- Returns true if the player is in a party or a raid
+function AmSolo()
+    return (GroupstatusInt() == 0);
+end
+
+function GroupstatusInt()
+    local group = 0
+    if GetNumPartyMembers() > 0 then
+        group = 1
+    end
+    if GetNumRaidMembers() > 0 then
+        group = 2
+    end
+    return group
+end
+
 function QH_ShowHideMTPriorityListUI()
     --{{{
     if (MTPriorityListFrame:IsVisible()) then
