@@ -96,6 +96,6 @@ Revised readme.md
 <hr>
   
 **1.16**<Br>
-Added functions SmartHeal(), SmartHealFirehose() and SmartHealThrottle().
+Added functions SmartRenew(), SmartRenewFirehose() and SmartRenewThrottle().
 Revised readme.md
 <hr>
