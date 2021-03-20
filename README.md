@@ -5,7 +5,7 @@ QuickHeal for Turtle WoW
 
 QuickHeal gives healers fast access to all of their direct healing spells for healing party/raid members and themselves. It lets you heal the people who need it, without having to target them manually, or even having to deselect the enemy you're fighting. It gives maximum mana efficiency, and will automatically use a lower rank of healing if the target doesn't need your biggest heal, or if your mana is running low. This also works when not in a party or a raid, and this will save you mana and precious time by automatically selecting the healing spell that does the necessary healing. There are several different key bindings for narrowing the group of people that will be considered for healing.
 
-I'm not the author of this revised version.  I modified Sulpitz's version to include an interface that allows the user to define a tank group independently of oRA.  This version also works with the 1.12.1 client.
+I'm not the author of this revised version.  I modified Sulpitz's version to include an interface that allows the user to define a tank group independently of oRA.  This version works with the 1.12.1 client.
 
 I shamelessly plagiarized the most recent version of QuickHeal with integration for HealComm from
 https://github.com/Sulpitz/QuickHeal
