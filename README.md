@@ -79,10 +79,10 @@ Only considers targets that are in the tank group, which is defined by populatin
 
 ** Additional Functions (priest class only at this time) **
 
-/script SmartRenew(); (Currently broken-ish)
+`/script SmartRenew();` (Currently broken-ish)<Br>
   ..applies max rank renew to any player w/o renew AND < 100% health
 
-/qh hot
+`/qh hot<Br>`
   ..applies throttled renew to any player w/o renew AND < 100% health
 
 ## ChangeLog:
