@@ -121,12 +121,46 @@ end
 --[ JGP UI Modifications ]--
 
 function jgpprint(a)
-    DEFAULT_CHAT_FRAME:AddMessage("|cff69ccf0[DEBUG] |cffffffff" .. a)
+    if QHV.DebugMode then
+        DEFAULT_CHAT_FRAME:AddMessage("|cff69ccf0[DEBUG] |cffffffff" .. a)
+    end
 end
 
 -- Applies highest rank renew on next party/raidmember that does not have renew
 -- regardless of their hp level
 function SmartRenewFirehose()
+    local lowest_unit, name
+    local tlt = false
+    local needRenew = false
+
+    -- Find a candidate target for healy-poo
+    needRenew, lowest_unit = FindRenewTarget(false)
+
+    -- If you have a target, store it
+    if UnitExists('target') then
+        name = UnitName("target");
+        tlt = true;
+    end
+
+    -- Cast max Renew rank
+    if needRenew then
+        TargetUnit(lowest_unit);
+        CastSpellByName("Renew")
+        --TheoryCraftCast("Renew")
+    end
+
+    -- Restore previous target, clear if you had no target
+    if tlt and needRenew then
+        -- and if current target != lowest_unit, target last target
+        TargetLastTarget();
+    else
+        --ClearTarget();
+    end
+end
+
+
+function SmartRenewFirehoseHODL()
+    --jgpprint("whaaat");
     local BRenew = 'Interface\\Icons\\Spell_Holy_Renew'
     local hasRenew = false
     local tlt = false
@@ -202,8 +236,9 @@ end
 -- Applies downranked renew on next party/raidmember that does not have renew
 -- if they are not @100% health
 function SmartRenewThrottle()
-    local needRenew, lowest_unit, name
+    local lowest_unit, name
     local tlt = false
+    local needRenew = false
 
     -- Find a candidate target for healy-poo
     needRenew, lowest_unit = FindRenewTarget(false)
@@ -217,14 +252,16 @@ function SmartRenewThrottle()
     -- Cast max Renew rank
     if needRenew then
         TargetUnit(lowest_unit);
+        --CastSpellByName("Renew")
         TheoryCraftCast("Renew")
     end
 
     -- Restore previous target, clear if you had no target
     if tlt and needRenew then
+        -- and if current target != lowest_unit, target last target
         TargetLastTarget();
     else
-        ClearTarget();
+        --ClearTarget();
     end
 end
 
@@ -1549,6 +1586,245 @@ local function CastCheckSpell()
     end
 end
 
+local function FindWhoToHOT(Restrict, extParam)
+    local playerIds = {};
+    local petIds = {};
+    local i;
+    local AllPlayersAreFull = true;
+    local AllPetsAreFull = true;
+
+    -- Self Preservation
+    local selfPercentage = (UnitHealth('player') + HealComm:getHeal('player')) / UnitHealthMax('player');
+    if (selfPercentage < QHV.RatioForceself) and (selfPercentage < QHV.RatioFull) then
+        QuickHeal_debug("********** Self Preservation **********");
+        return 'player';
+    end
+
+    -- Target Priority
+    if QHV.TargetPriority and QuickHeal_UnitHasHealthInfo('target') then
+        if (UnitHealth('target') / UnitHealthMax('target')) < QHV.RatioFull then
+            QuickHeal_debug("********** Target Priority **********");
+            return 'target';
+        end
+    end
+
+    -- Heal party/raid etc.
+    local RestrictParty = false;
+    local RestrictSubgroup = false;
+    local RestrictMT = false;
+    local RestrictNonMT = false;
+    if Restrict == "subgroup" then
+        QuickHeal_debug("********** Heal Subgroup **********");
+        RestrictSubgroup = true;
+    elseif Restrict == "party" then
+        QuickHeal_debug("********** Heal Party **********");
+        RestrictParty = true;
+    elseif Restrict == "mt" then
+        QuickHeal_debug("********** Heal MT **********");
+        RestrictMT = true;
+    elseif Restrict == "nonmt" then
+        QuickHeal_debug("********** Heal Non MT **********");
+        RestrictNonMT = true;
+    else
+        QuickHeal_debug("********** Heal **********");
+    end
+
+    -- Fill playerIds and petIds with healable targets
+    if (InRaid() and not RestrictParty) then
+        for i = 1, GetNumRaidMembers() do
+            if UnitIsHealable("raid" .. i, true) then
+                local IsMT = IsMainTank("raid" .. i);
+                if not RestrictMT and not RestrictNonMT or RestrictMT and IsMT or RestrictNonMT and not IsMT then
+                    playerIds["raid" .. i] = i;  -- every one that will be considered for heal
+                    --QH_Debug("healable: " .. i);
+                end
+            end
+            if UnitIsHealable("raidpet" .. i, true) then
+                if not RestrictMT then
+                    petIds["raidpet" .. i] = i;
+                end
+            end
+        end
+    else
+        if UnitIsHealable('player', true) then
+            playerIds["player"] = 0
+        end
+        if UnitIsHealable('pet', true) then
+            petIds["pet"] = 0
+        end
+        for i = 1, GetNumPartyMembers() do
+            if UnitIsHealable("party" .. i, true) then
+                playerIds["party" .. i] = i;
+            end
+            if UnitIsHealable("partypet" .. i, true) then
+                petIds["partypet" .. i] = i;
+            end
+        end
+    end
+
+    local healingTarget = nil;
+    local healingTargetHealth = 100000;
+    local healingTargetHealthPct = 1;
+    local healingTargetMissinHealth = 0;
+    local unit;
+
+    -- Clear any healable target
+    local OldPlaySound = PlaySound;
+    PlaySound = function()
+    end
+    local TargetWasCleared = false;
+    if UnitIsHealable('target') then
+        TargetWasCleared = true;
+        ClearTarget();
+    end
+
+    -- Cast the checkspell
+    CastCheckSpell();
+    if not SpellIsTargeting() then
+        -- Reacquire target if it was cleared
+        if TargetWasCleared then
+            TargetLastTarget();
+        end
+        -- Reinsert the PlaySound
+        PlaySound = OldPlaySound;
+        return false;
+    end
+
+    -- Examine Healable Players
+    for unit, i in playerIds do
+        local SubGroup = false;
+        if InRaid() and not RestrictParty and RestrictSubgroup and i <= GetNumRaidMembers() then
+            _, _, SubGroup = GetRaidRosterInfo(i);
+        end
+        if not RestrictSubgroup or RestrictParty or not InRaid() or (SubGroup and not QHV["FilterRaidGroup" .. SubGroup]) then
+            if not IsBlacklisted(UnitFullName(unit)) then
+                if SpellCanTargetUnit(unit) then
+                    QuickHeal_debug(string.format("%s (%s) : %d/%d", UnitFullName(unit), unit, UnitHealth(unit), UnitHealthMax(unit)));
+
+                    --Get who to heal for different classes
+                    local IncHeal = HealComm:getHeal(UnitName(unit))
+                    local PredictedHealth = (UnitHealth(unit) + IncHeal)
+                    local PredictedHealthPct = (UnitHealth(unit) + IncHeal) / UnitHealthMax(unit);
+                    local PredictedMissingHealth = UnitHealthMax(unit) - UnitHealth(unit) - IncHeal;
+
+                    if PredictedHealthPct < QHV.RatioFull then
+                        local _, PlayerClass = UnitClass('player');
+                        PlayerClass = string.lower(PlayerClass);
+
+                        if PlayerClass == "shaman" then
+                            if PredictedHealthPct < healingTargetHealthPct then
+                                healingTarget = unit;
+                                healingTargetHealthPct = PredictedHealthPct;
+                                AllPlayersAreFull = false;
+                            end
+                        elseif PlayerClass == "priest" then
+                            --writeLine("Find who to heal for Priest");
+                            if healPlayerWithLowestPercentageOfLife == 1 then
+                                if PredictedHealthPct < healingTargetHealthPct then
+                                    healingTarget = unit;
+                                    healingTargetHealthPct = PredictedHealthPct;
+                                    AllPlayersAreFull = false;
+                                end
+                            else
+                                if PredictedMissingHealth > healingTargetMissinHealth then
+                                    healingTarget = unit;
+                                    healingTargetMissinHealth = PredictedMissingHealth;
+                                    AllPlayersAreFull = false;
+                                end
+                            end
+                        elseif PlayerClass == "paladin" then
+                            --writeLine("Find who to heal for Paladin")
+                            if healPlayerWithLowestPercentageOfLife == 1 then
+                                if PredictedHealthPct < healingTargetHealthPct then
+                                    healingTarget = unit;
+                                    healingTargetHealthPct = PredictedHealthPct;
+                                    AllPlayersAreFull = false;
+                                end
+                            else
+                                if PredictedHealth < healingTargetHealth then
+                                    healingTarget = unit;
+                                    healingTargetHealth = PredictedHealth;
+                                    AllPlayersAreFull = false;
+                                end
+                            end
+                        elseif PlayerClass == "druid" then
+                            if PredictedHealthPct < healingTargetHealthPct then
+                                healingTarget = unit;
+                                healingTargetHealthPct = PredictedHealthPct;
+                                AllPlayersAreFull = false;
+                            end
+                        else
+                            writeLine(QuickHealData.name .. " " .. QuickHealData.version .. " does not support " .. UnitClass('player') .. ". " .. QuickHealData.name .. " not loaded.")
+                            return ;
+                        end
+                    end
+
+
+                    --writeLine("Values for "..UnitName(unit)..":")
+                    --writeLine("Health: "..UnitHealth(unit) / UnitHealthMax(unit).." | IncHeal: "..IncHeal / UnitHealthMax(unit).." | PredictedHealthPct: "..PredictedHealthPct) --Edelete
+                else
+                    QuickHeal_debug(UnitFullName(unit) .. " (" .. unit .. ")", "is out-of-range or unhealable");
+                end
+            else
+                QuickHeal_debug(UnitFullName(unit) .. " (" .. unit .. ")", "is blacklisted");
+            end
+        end
+    end
+    healPlayerWithLowestPercentageOfLife = 0
+    -- Examine Healable Pets
+    if QHV.PetPriority > 0 then
+        for unit, i in petIds do
+            local SubGroup = false;
+            if InRaid() and not RestrictParty and RestrictSubgroup and i <= GetNumRaidMembers() then
+                _, _, SubGroup = GetRaidRosterInfo(i);
+            end
+            if not RestrictSubgroup or RestrictParty or not InRaid() or (SubGroup and not QHV["FilterRaidGroup" .. SubGroup]) then
+                if not IsBlacklisted(UnitFullName(unit)) then
+                    if SpellCanTargetUnit(unit) then
+                        QuickHeal_debug(string.format("%s (%s) : %d/%d", UnitFullName(unit), unit, UnitHealth(unit), UnitHealthMax(unit)));
+                        local Health = UnitHealth(unit) / UnitHealthMax(unit);
+                        if Health < QHV.RatioFull then
+                            if ((QHV.PetPriority == 1) and AllPlayersAreFull) or (QHV.PetPriority == 2) or UnitIsUnit(unit, "target") then
+                                if Health < healingTargetHealthPct then
+                                    healingTarget = unit;
+                                    healingTargetHealthPct = Health;
+                                    AllPetsAreFull = false;
+                                end
+                            end
+                        end
+                    else
+                        QuickHeal_debug(UnitFullName(unit) .. " (" .. unit .. ")", "is out-of-range or unhealable");
+                    end
+                else
+                    QuickHeal_debug(UnitFullName(unit) .. " (" .. unit .. ")", "is blacklisted");
+                end
+            end
+        end
+    end
+
+    -- Reacquire target if it was cleared earlier, and stop CheckSpell
+    SpellStopTargeting();
+    if TargetWasCleared then
+        TargetLastTarget();
+    end
+    PlaySound = OldPlaySound;
+
+    -- Examine External Target
+    if AllPlayersAreFull and (AllPetsAreFull or QHV.PetPriority == 0) then
+        if not QuickHeal_UnitHasHealthInfo('target') and UnitIsHealable('target', true) then
+            QuickHeal_debug(string.format("%s (%s) : %d/%d", UnitFullName('target'), 'target', UnitHealth('target'), UnitHealthMax('target')));
+            local Health;
+            Health = UnitHealth('target') / 100;
+            if Health < QHV.RatioFull then
+                return 'target';
+            end
+        end
+    end
+
+    return healingTarget;
+end
+
+
 local function FindWhoToHeal(Restrict, extParam)
     local playerIds = {};
     local petIds = {};
@@ -1787,6 +2063,253 @@ local function FindWhoToHeal(Restrict, extParam)
     return healingTarget;
 end
 
+local function FindWhoToHOT(Restrict, extParam)
+    local playerIds = {};
+    local petIds = {};
+    local i;
+    local AllPlayersAreFull = true;
+    local AllPetsAreFull = true;
+
+    -- Self Preservation
+    local selfPercentage = (UnitHealth('player') + HealComm:getHeal('player')) / UnitHealthMax('player');
+    if (selfPercentage < QHV.RatioForceself) and (selfPercentage < QHV.RatioFull) then
+        QuickHeal_debug("********** Self Preservation **********");
+        if not UnitHasRenew('player') then
+            return 'player';
+        end
+    end
+
+    -- Target Priority
+    if QHV.TargetPriority and QuickHeal_UnitHasHealthInfo('target') then
+        if (UnitHealth('target') / UnitHealthMax('target')) < QHV.RatioFull then
+            QuickHeal_debug("********** Target Priority **********");
+            if not UnitHasRenew('target') then
+                return 'target';
+            end
+        end
+    end
+
+    -- Heal party/raid etc.
+    local RestrictParty = false;
+    local RestrictSubgroup = false;
+    local RestrictMT = false;
+    local RestrictNonMT = false;
+    if Restrict == "subgroup" then
+        QuickHeal_debug("********** Heal Subgroup **********");
+        RestrictSubgroup = true;
+    elseif Restrict == "party" then
+        QuickHeal_debug("********** Heal Party **********");
+        RestrictParty = true;
+    elseif Restrict == "mt" then
+        QuickHeal_debug("********** Heal MT **********");
+        RestrictMT = true;
+    elseif Restrict == "nonmt" then
+        QuickHeal_debug("********** Heal Non MT **********");
+        RestrictNonMT = true;
+    else
+        QuickHeal_debug("********** Heal **********");
+    end
+
+    -- Fill playerIds and petIds with healable targets
+    if (InRaid() and not RestrictParty) then
+        for i = 1, GetNumRaidMembers() do
+            if UnitIsHealable("raid" .. i, true) then
+                local IsMT = IsMainTank("raid" .. i);
+                if not RestrictMT and not RestrictNonMT or RestrictMT and IsMT or RestrictNonMT and not IsMT then
+                    playerIds["raid" .. i] = i;  -- every one that will be considered for heal
+                    --QH_Debug("healable: " .. i);
+                end
+            end
+            if UnitIsHealable("raidpet" .. i, true) then
+                if not RestrictMT then
+                    petIds["raidpet" .. i] = i;
+                end
+            end
+        end
+    else
+        if UnitIsHealable('player', true) then
+            playerIds["player"] = 0
+        end
+        if UnitIsHealable('pet', true) then
+            petIds["pet"] = 0
+        end
+        for i = 1, GetNumPartyMembers() do
+            if UnitIsHealable("party" .. i, true) then
+                playerIds["party" .. i] = i;
+            end
+            if UnitIsHealable("partypet" .. i, true) then
+                petIds["partypet" .. i] = i;
+            end
+        end
+    end
+
+    local healingTarget = nil;
+    local healingTargetHealth = 100000;
+    local healingTargetHealthPct = 1;
+    local healingTargetMissinHealth = 0;
+    local unit;
+
+    -- Clear any healable target
+    local OldPlaySound = PlaySound;
+    PlaySound = function()
+    end
+    local TargetWasCleared = false;
+    if UnitIsHealable('target') then
+        TargetWasCleared = true;
+        ClearTarget();
+    end
+
+    -- Cast the checkspell
+    CastCheckSpell();
+    if not SpellIsTargeting() then
+        -- Reacquire target if it was cleared
+        if TargetWasCleared then
+            TargetLastTarget();
+        end
+        -- Reinsert the PlaySound
+        PlaySound = OldPlaySound;
+        return false;
+    end
+
+    -- Examine Healable Players
+    for unit, i in playerIds do
+        local SubGroup = false;
+        if InRaid() and not RestrictParty and RestrictSubgroup and i <= GetNumRaidMembers() then
+            _, _, SubGroup = GetRaidRosterInfo(i);
+        end
+        if not RestrictSubgroup or RestrictParty or not InRaid() or (SubGroup and not QHV["FilterRaidGroup" .. SubGroup]) then
+            if not IsBlacklisted(UnitFullName(unit)) then
+                if SpellCanTargetUnit(unit) then
+                    QuickHeal_debug(string.format("%s (%s) : %d/%d", UnitFullName(unit), unit, UnitHealth(unit), UnitHealthMax(unit)));
+
+                    --Get who to heal for different classes
+                    local IncHeal = HealComm:getHeal(UnitName(unit))
+                    local PredictedHealth = (UnitHealth(unit) + IncHeal)
+                    local PredictedHealthPct = (UnitHealth(unit) + IncHeal) / UnitHealthMax(unit);
+                    local PredictedMissingHealth = UnitHealthMax(unit) - UnitHealth(unit) - IncHeal;
+
+                    if PredictedHealthPct < QHV.RatioFull then
+                        local _, PlayerClass = UnitClass('player');
+                        PlayerClass = string.lower(PlayerClass);
+
+                        if PlayerClass == "shaman" then
+                            if PredictedHealthPct < healingTargetHealthPct then
+                                healingTarget = unit;
+                                healingTargetHealthPct = PredictedHealthPct;
+                                AllPlayersAreFull = false;
+                            end
+                        elseif PlayerClass == "priest" then
+                            --writeLine("Find who to heal for Priest");
+                            if healPlayerWithLowestPercentageOfLife == 1 then
+                                if PredictedHealthPct < healingTargetHealthPct then
+                                    if not UnitHasRenew(unit) then
+                                        healingTarget = unit;
+                                        healingTargetHealthPct = PredictedHealthPct;
+                                        AllPlayersAreFull = false;
+                                    end
+                                end
+                            else
+                                if PredictedMissingHealth > healingTargetMissinHealth then
+                                    if not UnitHasRenew(unit) then
+                                        healingTarget = unit;
+                                        healingTargetMissinHealth = PredictedMissingHealth;
+                                        AllPlayersAreFull = false;
+                                    end
+                                end
+                            end
+                        elseif PlayerClass == "paladin" then
+                            --writeLine("Find who to heal for Paladin")
+                            if healPlayerWithLowestPercentageOfLife == 1 then
+                                if PredictedHealthPct < healingTargetHealthPct then
+                                    healingTarget = unit;
+                                    healingTargetHealthPct = PredictedHealthPct;
+                                    AllPlayersAreFull = false;
+                                end
+                            else
+                                if PredictedHealth < healingTargetHealth then
+                                    healingTarget = unit;
+                                    healingTargetHealth = PredictedHealth;
+                                    AllPlayersAreFull = false;
+                                end
+                            end
+                        elseif PlayerClass == "druid" then
+                            if PredictedHealthPct < healingTargetHealthPct then
+                                healingTarget = unit;
+                                healingTargetHealthPct = PredictedHealthPct;
+                                AllPlayersAreFull = false;
+                            end
+                        else
+                            writeLine(QuickHealData.name .. " " .. QuickHealData.version .. " does not support " .. UnitClass('player') .. ". " .. QuickHealData.name .. " not loaded.")
+                            return ;
+                        end
+                    end
+
+
+                    --writeLine("Values for "..UnitName(unit)..":")
+                    --writeLine("Health: "..UnitHealth(unit) / UnitHealthMax(unit).." | IncHeal: "..IncHeal / UnitHealthMax(unit).." | PredictedHealthPct: "..PredictedHealthPct) --Edelete
+                else
+                    QuickHeal_debug(UnitFullName(unit) .. " (" .. unit .. ")", "is out-of-range or unhealable");
+                end
+            else
+                QuickHeal_debug(UnitFullName(unit) .. " (" .. unit .. ")", "is blacklisted");
+            end
+        end
+    end
+    healPlayerWithLowestPercentageOfLife = 0
+    -- Examine Healable Pets
+    if QHV.PetPriority > 0 then
+        for unit, i in petIds do
+            local SubGroup = false;
+            if InRaid() and not RestrictParty and RestrictSubgroup and i <= GetNumRaidMembers() then
+                _, _, SubGroup = GetRaidRosterInfo(i);
+            end
+            if not RestrictSubgroup or RestrictParty or not InRaid() or (SubGroup and not QHV["FilterRaidGroup" .. SubGroup]) then
+                if not IsBlacklisted(UnitFullName(unit)) then
+                    if SpellCanTargetUnit(unit) then
+                        QuickHeal_debug(string.format("%s (%s) : %d/%d", UnitFullName(unit), unit, UnitHealth(unit), UnitHealthMax(unit)));
+                        local Health = UnitHealth(unit) / UnitHealthMax(unit);
+                        if Health < QHV.RatioFull then
+                            if ((QHV.PetPriority == 1) and AllPlayersAreFull) or (QHV.PetPriority == 2) or UnitIsUnit(unit, "target") then
+                                if Health < healingTargetHealthPct then
+                                    healingTarget = unit;
+                                    healingTargetHealthPct = Health;
+                                    AllPetsAreFull = false;
+                                end
+                            end
+                        end
+                    else
+                        QuickHeal_debug(UnitFullName(unit) .. " (" .. unit .. ")", "is out-of-range or unhealable");
+                    end
+                else
+                    QuickHeal_debug(UnitFullName(unit) .. " (" .. unit .. ")", "is blacklisted");
+                end
+            end
+        end
+    end
+
+    -- Reacquire target if it was cleared earlier, and stop CheckSpell
+    SpellStopTargeting();
+    if TargetWasCleared then
+        TargetLastTarget();
+    end
+    PlaySound = OldPlaySound;
+
+    -- Examine External Target
+    if AllPlayersAreFull and (AllPetsAreFull or QHV.PetPriority == 0) then
+        if not QuickHeal_UnitHasHealthInfo('target') and UnitIsHealable('target', true) then
+            QuickHeal_debug(string.format("%s (%s) : %d/%d", UnitFullName('target'), 'target', UnitHealth('target'), UnitHealthMax('target')));
+            local Health;
+            Health = UnitHealth('target') / 100;
+            if Health < QHV.RatioFull then
+                return 'target';
+            end
+        end
+    end
+
+    return healingTarget;
+end
+
+
 local function Notification(unit, spellName)
     local unitName = UnitFullName(unit);
     local rand = math.random(1, 10);
@@ -1992,10 +2515,104 @@ local function ExecuteHeal(Target, SpellID)
     PlaySound = OldPlaySound;
 end
 
+-- HOTs Target with SpellID, no checking on parameters
+local function ExecuteHOT(Target, SpellID)
+    local TargetWasChanged = false;
+
+    -- Setup the monitor and related events
+    --StartMonitor(Target);
+
+    -- Supress sound from target-switching
+    local OldPlaySound = PlaySound;
+    PlaySound = function()
+    end
+
+    -- If the current target is healable, take special measures
+    if UnitIsHealable('target') then
+        -- If the healing target is targettarget change current healable target to targettarget
+        if Target == 'targettarget' then
+            local old = UnitFullName('target');
+            TargetUnit('targettarget');
+            Target = 'target';
+            TargetWasChanged = true;
+            QuickHeal_debug("Healable target preventing healing, temporarily switching target to target's target", old, '-->', UnitFullName('target'));
+        end
+        -- If healing target is not the current healable target clear the healable target
+        if not (Target == 'target') then
+            QuickHeal_debug("Healable target preventing healing, temporarily clearing target", UnitFullName('target'));
+            ClearTarget();
+            TargetWasChanged = true;
+        end
+    end
+
+    -- Get spell info
+    local SpellName, SpellRank = GetSpellName(SpellID, BOOKTYPE_SPELL);
+    if SpellRank == "" then
+        SpellRank = nil
+    end
+    local SpellNameAndRank = SpellName .. (SpellRank and " (" .. SpellRank .. ")" or "");
+
+    QuickHeal_debug("  Casting: " .. SpellNameAndRank .. " on " .. UnitFullName(Target) .. " (" .. Target .. ")" .. ", ID: " .. SpellID);
+
+    -- Clear any pending spells
+    if SpellIsTargeting() then
+        SpellStopTargeting()
+    end
+
+    -- Cast the spell
+    CastSpell(SpellID, BOOKTYPE_SPELL);
+
+    -- Target == 'target'
+    -- Instant channeling --> succesful cast
+    -- Instant channeling --> instant 'out of range' fail
+    -- Instant channeling --> delayed 'line of sight' fail
+    -- No channeling --> SpellStillTargeting (unhealable NPC's, duelists etc.)
+
+    -- Target ~= 'target'
+    -- SpellCanTargetUnit == true
+    -- Channeling --> succesful cast
+    -- Channeling --> instant 'out of range' fail
+    -- Channeling --> delayed 'line of sight' fail
+    -- No channeling --> SpellStillTargeting (unknown circumstances)
+    -- SpellCanTargetUnit == false
+    -- Duels/unhealable NPC's etc.
+
+    -- The spell is awaiting target selection, write to screen if the spell can actually be cast
+    if SpellCanTargetUnit(Target) or ((Target == 'target') and HealingTarget) then
+
+        Notification(Target, SpellNameAndRank);
+
+        -- Write to center of screen
+        if UnitIsUnit(Target, 'player') then
+            Message(string.format("Casting %s on yourself", SpellNameAndRank), "Healing", 3)
+        else
+            Message(string.format("Casting %s on %s", SpellNameAndRank, UnitFullName(Target)), "Healing", 3)
+        end
+    end
+
+    -- Assign the target of the healing spell
+    SpellTargetUnit(Target);
+
+    -- just in case something went wrong here (Healing people in duels!)
+    if SpellIsTargeting() then
+        StopMonitor("Spell cannot target " .. (UnitFullName(Target) or "unit"));
+        SpellStopTargeting()
+    end
+
+    -- Reacquire target if it was changed earlier
+    if TargetWasChanged then
+        local old = UnitFullName('target') or "None";
+        TargetLastTarget();
+        QuickHeal_debug("Reacquired previous target", old, '-->', UnitFullName('target'));
+    end
+
+    -- Enable sound again
+    PlaySound = OldPlaySound;
+end
+
 -- Heals the specified Target with the specified Spell
 -- If parameters are missing they will be determined automatically
 function QuickHeal(Target, SpellID, extParam)
-
 
     -- Only one instance of QuickHeal allowed at a time
     if QuickHealBusy then
@@ -2138,7 +2755,7 @@ function QuickHeal(Target, SpellID, extParam)
     -- Check SpellID input
     if not SpellID then
         -- No SpellID specified, find appropriate spell
-        SpellID, HealingSpellSize = FindSpellToUse(Target);
+        SpellID, HealingSpellSize = FindSpellToUse(Target, "channel");
     elseif type(SpellID) == "string" then
         -- Spell specified as string, extract name and possibly rank
         local _, _, sname, srank = string.find(SpellID, "^(..-)%s*(%d*)$")
@@ -2182,6 +2799,203 @@ function QuickHeal(Target, SpellID, extParam)
 
     SetCVar("autoSelfCast", AutoSelfCast);
 end
+
+-- Heals the specified Target with the specified Spell
+-- If parameters are missing they will be determined automatically
+function QuickHOT(Target, SpellID, extParam)
+
+    -- Only one instance of QuickHeal allowed at a time
+    if QuickHealBusy then
+        if HealingTarget and MassiveOverhealInProgress then
+            QuickHeal_debug("Massive overheal aborted.");
+            SpellStopCasting();
+        else
+            QuickHeal_debug("Healing in progress, command ignored");
+        end
+        return ;
+    end
+
+    QuickHealBusy = true;
+    local AutoSelfCast = GetCVar("autoSelfCast");
+    SetCVar("autoSelfCast", 0);
+
+    -- Protect against invalid extParam
+    if not (type(extParam) == "table") then
+        extParam = {}
+    end
+
+    -- Decode special values for Target
+    local Restrict = nil;
+    if Target then
+        Target = string.lower(Target)
+    end
+    if Target == "party" or Target == "subgroup" then
+        Restrict = Target;
+        Target = nil;
+    elseif Target == "mt" or Target == "nonmt" then
+        if InRaid() then
+            Restrict = Target;
+            Target = nil;
+        else
+            Message("You are not in a raid", "Error", 2);
+            SetCVar("autoSelfCast", AutoSelfCast);
+            QuickHealBusy = false;
+            return ;
+        end
+    end
+
+    if Target then
+        -- Target is specified, check it
+        QuickHeal_debug("********** Heal " .. Target .. " **********");
+        if UnitIsHealable(Target, true) then
+            QuickHeal_debug(string.format("%s (%s) : %d/%d", UnitFullName(Target), Target, UnitHealth(Target), UnitHealthMax(Target)));
+            local targetPercentage;
+            if QuickHeal_UnitHasHealthInfo(Target) then
+                targetPercentage = (UnitHealth(Target) + HealComm:getHeal(UnitName(Target))) / UnitHealthMax(Target);
+            else
+                targetPercentage = UnitHealth(Target) / 100;
+            end
+            if targetPercentage < QHV.RatioFull then
+                -- Does need healing (fall through to healing code)
+            else
+                -- Does not need healing
+                if UnitIsUnit(Target, 'player') then
+                    Message("You don't need healing", "Info", 2);
+                elseif Target == 'target' then
+                    Message(UnitFullName('target') .. " doesn't need healing", "Info", 2);
+                elseif Target == "targettarget" then
+                    Message(UnitFullName('target') .. "'s Target (" .. UnitFullName('targettarget') .. ") doesn't need healing", "Info", 2);
+                else
+                    Message(UnitFullName(Target) .. " doesn't need healing", "Info", 2);
+                end
+                SetCVar("autoSelfCast", AutoSelfCast);
+                QuickHealBusy = false;
+                return ;
+            end
+        else
+            -- Unit is not healable, report reason and return
+            if Target == 'target' and not UnitExists('target') then
+                Message("You don't have a target", "Error", 2);
+            elseif Target == 'targettarget' then
+                if not UnitExists('target') then
+                    Message("You don't have a target", "Error", 2);
+                elseif not UnitExists('targettarget') then
+                    Message((UnitFullName('target') or "Target") .. " doesn't have a target", "Error", 2);
+                else
+                    Message(UnitFullName('target') .. "'s Target (" .. UnitFullName('targettarget') .. ") cannot be healed", "Error", 2);
+                end
+            elseif UnitExists(Target) then
+                -- Unit exists but cannot be healed
+                if UnitIsUnit(Target, 'player') then
+                    Message("You cannot be healed", "Error", 2);
+                else
+                    Message(UnitFullName(Target) .. " cannot be healed", "Error", 2);
+                end
+            else
+                Message("Unit does not exist", "Error", 2);
+            end
+            SetCVar("autoSelfCast", AutoSelfCast);
+            QuickHealBusy = false;
+            return ;
+        end
+    else
+        -- Target not specified, determine automatically
+        Target = FindWhoToHOT(Restrict, extParam)
+        if not Target then
+            -- No healing target found
+            if Target == false then
+                -- Means that FindWhoToHeal couldn't cast the CheckSpell (reason will be reported by UI)
+            else
+                if Restrict == "mt" then
+                    local tanks = false;
+
+                    --local i, v;
+                    --for i, v in pairs(CT_RA_MainTanks or (oRA_MainTank and oRA_MainTank.MainTankTable or nil) or {}) do
+                    --    tanks = true;
+                    --    break ;
+                    --end
+                    local t, y;
+                    for t, y in pairs(QH_Saved.PriorityList) do
+                        tanks = true;
+                        break ;
+                    end
+
+                    if not tanks then
+                        Message("No players assigned as Main Tank by Raid Leader", "Error", 2);
+                    else
+                        Message("No Main Tank to heal", "Info", 2);
+                    end
+                elseif InParty() or InRaid() then
+                    Message("No one to heal", "Info", 2);
+                else
+                    Message("You don't need healing", "Info", 2);
+                end
+            end
+            SetCVar("autoSelfCast", AutoSelfCast);
+            QuickHealBusy = false;
+            return ;
+        end
+    end
+
+    -- Target acquired
+    QuickHeal_debug(string.format("  Healing target: %s (%s)", UnitFullName(Target), Target));
+
+    HealingSpellSize = 0;
+
+    -- Check SpellID input
+    if not SpellID then
+        -- No SpellID specified, find appropriate spell
+        SpellID, HealingSpellSize = FindSpellToUse(Target, "hot");
+    elseif type(SpellID) == "string" then
+        -- Spell specified as string, extract name and possibly rank
+        local _, _, sname, srank = string.find(SpellID, "^(..-)%s*(%d*)$")
+        SpellID = nil;
+        if sname and srank then
+            -- Both substrings matched, get a list of SpellIDs
+            local slist = QuickHeal_GetSpellInfo(sname);
+
+            if slist[0] then
+                -- Spell does not have different ranks use entry 0
+                SpellID = slist[0].SpellID;
+                --HealingSpellSize = slist[0].Heal;
+            elseif table.getn(slist) > 0 then
+                -- Spell has different ranks get the one specified or choose max rank
+                srank = tonumber(srank);
+                if srank and slist[srank] then
+                    -- Rank specified and exists
+                    SpellID = slist[srank].SpellID;
+                    --HealingSpellSize = slist[srank].Heal;
+                else
+                    -- rank not specified or does not exist, use max rank
+                    SpellID = slist[table.getn(slist)].SpellID;
+                    --HealingSpellSize = slist[table.getn(slist)].Heal;
+                end
+            end
+        end
+        if not SpellID then
+            -- Failed to decode the string
+            Message("Spell not found", "Error", 2);
+            SetCVar("autoSelfCast", AutoSelfCast);
+            QuickHealBusy = false;
+            return ;
+        end
+    end
+
+    -- JGP debug
+    --jgpprint("---------------------------------------------");
+    --jgpprint(SpellID);
+    --SpellID = 25315;
+
+    if SpellID then
+        ExecuteHOT(Target, SpellID);
+        QuickHealBusy = false;
+    else
+        Message("You have no healing spells to cast", "Error", 2);
+    end
+
+    SetCVar("autoSelfCast", AutoSelfCast);
+end
+
 
 function ToggleDownrankWindow()
     if QuickHeal_DownrankSlider:IsVisible() then
@@ -2236,6 +3050,11 @@ function QuickHeal_Command(msg)
         return ;
     end
 
+    if cmd == "hot" then
+        QuickHOT();
+        return ;
+    end
+
 
 
     -- Parse healing commands
@@ -2262,4 +3081,5 @@ function QuickHeal_Command(msg)
     writeLine("/qh subgroup - Forces the healing to the groups selected in the configuration panel.");
     writeLine("/qh reset - Reset configuration to default parameters for all classes.");
     writeLine("/qh healpct - Will prioritise the player with the lowest percentage of health.");
+    writeLine("/qh hot - HOTs(throttled) the player with the lowest percentage of health.");
 end
