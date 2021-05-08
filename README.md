@@ -93,6 +93,11 @@ Revised readme.md
 <hr>
   
 **1.16**<Br>
-Added functions SmartRenew(), SmartRenewFirehose() and SmartRenewThrottle().
+Added functions `SmartRenew()`, `SmartRenewFirehose()` and `SmartRenewThrottle()`.
 Revised readme.md
+<hr>
+  
+**1.16.1**<Br>
+Removed functions `SmartRenew()`, `SmartRenewFirehose()` and `SmartRenewThrottle()`.  These were causing target focus problems.
+Implemented `/qh hot` to replace SmartRenewThrottle().  Regular SmartRenew & SmartRenewFirehose comin' soon-ish like.
 <hr>
