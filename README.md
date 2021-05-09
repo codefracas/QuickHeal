@@ -83,7 +83,7 @@ Only considers targets that are in the tank group, which is defined by populatin
   ..applies max rank renew to any player w/o renew AND < 100% health (Currently broken-ish)
 
 `/qh hot`<Br>
-  ..applies throttled renew to any player w/o renew AND < 100% health
+  ..applies throttled renew to any player w/o renew AND < lowest % health in raid/party
 
 ## ChangeLog:
 **1.14.5**<Br>
