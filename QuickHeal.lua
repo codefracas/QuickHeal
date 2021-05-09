@@ -6,9 +6,9 @@ HealComm = AceLibrary("HealComm-1.0")
 --[ Mod data ]--
 QuickHealData = {
     name = 'QuickHeal',
-    version = '1.14.5',
-    releaseDate = 'February 11th, 2021',
-    author = 'T. Thorsen, S. Geeding and K. Karachalios feat Dispatchio',
+    version = '1.16.1',
+    releaseDate = 'May 8th, 2021',
+    author = 'T. Thorsen, S. Geeding and K. Karachalios feat. Dispatchio',
     website = 'https://turtle-wow.org/',
     category = MYADDONS_CATEGORY_CLASS
 }
