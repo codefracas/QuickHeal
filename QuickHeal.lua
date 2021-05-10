@@ -1586,6 +1586,20 @@ local function CastCheckSpell()
     end
 end
 
+local function CastCheckSpellHOT()
+    local _, class = UnitClass('player');
+    class = string.lower(class);
+    if class == "druid" then
+        CastSpell(QuickHeal_GetSpellInfo(QUICKHEAL_SPELL_HEALING_TOUCH)[1].SpellID, BOOKTYPE_SPELL);
+    elseif class == "paladin" then
+        CastSpell(QuickHeal_GetSpellInfo(QUICKHEAL_SPELL_HOLY_LIGHT)[1].SpellID, BOOKTYPE_SPELL);
+    elseif class == "priest" then
+        CastSpell(QuickHeal_GetSpellInfo(QUICKHEAL_SPELL_RENEW)[1].SpellID, BOOKTYPE_SPELL);
+    elseif class == "shaman" then
+        CastSpell(QuickHeal_GetSpellInfo(QUICKHEAL_SPELL_HEALING_WAVE)[1].SpellID, BOOKTYPE_SPELL);
+    end
+end
+
 local function FindWhoToHOT(Restrict, extParam)
     local playerIds = {};
     local petIds = {};
@@ -2160,7 +2174,7 @@ local function FindWhoToHOT(Restrict, extParam)
     end
 
     -- Cast the checkspell
-    CastCheckSpell();
+    CastCheckSpellHOT();
     if not SpellIsTargeting() then
         -- Reacquire target if it was cleared
         if TargetWasCleared then
