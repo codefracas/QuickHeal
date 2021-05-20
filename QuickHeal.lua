@@ -3071,7 +3071,7 @@ function QuickHeal_Command(msg)
 
 
 
-    -- Parse healing commands
+    -- Parse healing commands lol
     if cmd == "" then
         QuickHeal();
         return ;
