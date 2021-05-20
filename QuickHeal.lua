@@ -2626,7 +2626,7 @@ end
 
 -- Heals the specified Target with the specified Spell
 -- If parameters are missing they will be determined automatically
-function QuickHeal(Target, SpellID, extParam)
+function QuickHeal(Target, SpellID, extParam, forceMaxRank)
 
     -- Only one instance of QuickHeal allowed at a time
     if QuickHealBusy then
@@ -2816,7 +2816,7 @@ end
 
 -- Heals the specified Target with the specified Spell
 -- If parameters are missing they will be determined automatically
-function QuickHOT(Target, SpellID, extParam)
+function QuickHOT(Target, SpellID, extParam, forceMaxRank)
 
     -- Only one instance of QuickHeal allowed at a time
     if QuickHealBusy then
@@ -3021,6 +3021,22 @@ end
 
 function QuickHeal_Command(msg)
 
+    local _, _, arg1, arg2, arg3 = string.find(msg, "%s?(%w+)%s?(%w+)%s?(%w+)")
+
+    -- Parse healing commands
+    if arg1 == "player" or arg1 == "target" or arg1 == "targettarget" or arg1 == "party" or arg1 == "subgroup" or arg1 == "mt" or arg1 == "nonmt" then
+        if arg2 == "heal" and arg3 == "max" then
+            writeLine(QuickHealData.name .. " qh " .. arg1 .. " HEAL(max rank)", 0, 1, 0);
+            QuickHeal(arg1, nil, nil, true);
+            return;
+        elseif arg2 == "hot" and arg3 == "max" then
+            writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT(max rank)", 0, 1, 0);
+            QuickHOT(arg1, nil, nil, true);
+            return;
+        end
+        --QuickHeal(cmd);
+    end
+
     local cmd = string.lower(msg)
 
     if cmd == "cfg" then
@@ -3038,6 +3054,7 @@ function QuickHeal_Command(msg)
         return ;
     end
 
+    --[[
     if cmd == "debug on" then
         QHV.DebugMode = true;
         writeLine(QuickHealData.name .. " debug mode enabled", 0, 0, 1);
@@ -3049,6 +3066,7 @@ function QuickHeal_Command(msg)
         writeLine(QuickHealData.name .. " debug mode disabled", 0, 0, 1);
         return ;
     end
+    ]]--
 
     if cmd == "reset" then
         QuickHeal_SetDefaultParameters();
@@ -3065,19 +3083,61 @@ function QuickHeal_Command(msg)
     end
 
     if cmd == "hot" then
+        writeLine(QuickHealData.name .. " HOT", 0, 1, 0);
         QuickHOT();
         return ;
     end
 
-
-
-    -- Parse healing commands lol
+    -- Parse healing commands
     if cmd == "" then
-        QuickHeal();
+        writeLine(QuickHealData.name .. " qh", 0, 1, 0);
+        QuickHeal(nil);
         return ;
     elseif cmd == "player" or cmd == "target" or cmd == "targettarget" or cmd == "party" or cmd == "subgroup" or cmd == "mt" or cmd == "nonmt" then
+        writeLine(QuickHealData.name .. " qh " .. cmd, 0, 1, 0);
         QuickHeal(cmd);
         return ;
+    end
+
+    local _, _, arg1, arg2= string.find(msg, "%s?(%w+)%s?(%w+)")
+
+    if arg1 == "debug" then
+        if arg2 == "on" then
+            QHV.DebugMode = true;
+            writeLine(QuickHealData.name .. " debug mode enabled", 0, 0, 1);
+        elseif arg2 == "off" then
+            QHV.DebugMode = false;
+            writeLine(QuickHealData.name .. " debug mode disabled", 0, 0, 1);
+        end
+        return ;
+    end
+
+    if arg1 == "hot" and arg2 == "max" then
+        writeLine(QuickHealData.name .. " HOT (max rank)", 0, 1, 0);
+        --healPlayerWithLowestPercentageOfLife = 1
+        QuickHOT(nil, nil, nil, max);
+        return ;
+    end
+
+    -- Parse healing commands
+    if arg1 == "player" or arg1 == "target" or arg1 == "targettarget" or arg1 == "party" or arg1 == "subgroup" or arg1 == "mt" or arg1 == "nonmt" then
+        if arg2 == "heal" then
+            writeLine(QuickHealData.name .. " qh " .. arg1 .. " HEAL", 0, 1, 0);
+            QuickHeal(arg1, nil, nil, false);
+            return;
+        --elseif arg2 == "healmax" then
+            --writeLine(QuickHealData.name .. " qh " .. arg1 .. " HEAL(max rank)", 0, 1, 0);
+            --QuickHeal(arg1, nil, nil, true);
+            --return;
+        elseif arg2 == "hot" then
+            writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT", 0, 1, 0);
+            QuickHOT(arg1, nil, nil, false);
+            return;
+        --elseif arg2 == "hotmax" then
+            --writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT(max rank)", 0, 1, 0);
+            --QuickHOT(arg1, nil, nil, true);
+            --return;
+        end
     end
 
     -- Print usage information
@@ -3085,15 +3145,14 @@ function QuickHeal_Command(msg)
     writeLine("/qh cfg - Opens up the configuration panel.");
     writeLine("/qh toggle - Swiches between only Flashheals and or Normal Heals (Healthy Threshold 0% or 100%).");
     writeLine("/qh downrank | dr - Opens the slider to limit QuickHeal to use only lower ranks.");
-    writeLine("/qh - Heals the party/raid member that most need it with the best suited healing spell.");
-    writeLine("/qh player - Forces the target of the healing to be yourself.");
-    writeLine("/qh target - Forces the target of the healing to be your current target.");
-    writeLine("/qh targettarget - Forces the target of the healing to be your current target's target.");
-    writeLine("/qh party - Restricts the healing to the party when in a raid.");
-    writeLine("/qh mt - Restricts the healing to the Main Tanks defined by the Raid Leader in CTRaidAssist or oRA.");
-    writeLine("/qh nonmt - Restricts the healing to players who are not defined as Main Tanks by the Raid Leader in CTRaidAssist or oRA.");
-    writeLine("/qh subgroup - Forces the healing to the groups selected in the configuration panel.");
+    writeLine("/qh [hot] [max] - Heals the party/raid member that most need it with the best suited healing spell.");
+    writeLine("/qh player [hot] [max] - Forces the target of the healing to be yourself.");
+    writeLine("/qh target [hot] [max] - Forces the target of the healing to be your current target.");
+    writeLine("/qh targettarget [hot] [max] - Forces the target of the healing to be your current target's target.");
+    writeLine("/qh party [hot] [max] - Restricts the healing to the party when in a raid.");
+    writeLine("/qh mt [hot] [max] - Restricts the healing to the Main Tanks defined by the Raid Leader in CTRaidAssist or oRA.");
+    writeLine("/qh nonmt [hot] [max] - Restricts the healing to players who are not defined as Main Tanks by the Raid Leader in CTRaidAssist or oRA.");
+    writeLine("/qh subgroup [hot] [max] - Forces the healing to the groups selected in the configuration panel.");
     writeLine("/qh reset - Reset configuration to default parameters for all classes.");
-    writeLine("/qh healpct - Will prioritise the player with the lowest percentage of health.");
-    writeLine("/qh hot - HOTs(throttled) the player with the lowest percentage of health.");
+    writeLine("/qh healpct [hot] [max] - Will prioritise the player with the lowest percentage of health.");
 end
