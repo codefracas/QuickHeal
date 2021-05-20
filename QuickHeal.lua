@@ -3041,17 +3041,17 @@ function QuickHeal_Command(msg)
 
     if cmd == "cfg" then
         QuickHeal_ToggleConfigurationPanel();
-        return ;
+        return;
     end
 
     if cmd == "toggle" then
         QuickHeal_Toggle_Healthy_Threshold();
-        return ;
+        return;
     end
 
     if cmd == "downrank" or cmd == "dr" then
         ToggleDownrankWindow()
-        return ;
+        return;
     end
 
     --[[
@@ -3073,30 +3073,30 @@ function QuickHeal_Command(msg)
         writeLine(QuickHealData.name .. " reset to default configuration", 0, 0, 1);
         QuickHeal_ToggleConfigurationPanel();
         QuickHeal_ToggleConfigurationPanel();
-        return ;
+        return;
     end
 
     if cmd == "healpct" then
         healPlayerWithLowestPercentageOfLife = 1
         QuickHeal();
-        return ;
+        return;
     end
 
     if cmd == "hot" then
         writeLine(QuickHealData.name .. " HOT", 0, 1, 0);
         QuickHOT();
-        return ;
+        return;
     end
 
     -- Parse healing commands
     if cmd == "" then
         writeLine(QuickHealData.name .. " qh", 0, 1, 0);
         QuickHeal(nil);
-        return ;
+        return;
     elseif cmd == "player" or cmd == "target" or cmd == "targettarget" or cmd == "party" or cmd == "subgroup" or cmd == "mt" or cmd == "nonmt" then
         writeLine(QuickHealData.name .. " qh " .. cmd, 0, 1, 0);
         QuickHeal(cmd);
-        return ;
+        return;
     end
 
     local _, _, arg1, arg2= string.find(msg, "%s?(%w+)%s?(%w+)")
@@ -3109,14 +3109,14 @@ function QuickHeal_Command(msg)
             QHV.DebugMode = false;
             writeLine(QuickHealData.name .. " debug mode disabled", 0, 0, 1);
         end
-        return ;
+        return;
     end
 
     if arg1 == "hot" and arg2 == "max" then
         writeLine(QuickHealData.name .. " HOT (max rank)", 0, 1, 0);
         --healPlayerWithLowestPercentageOfLife = 1
         QuickHOT(nil, nil, nil, max);
-        return ;
+        return;
     end
 
     -- Parse healing commands
