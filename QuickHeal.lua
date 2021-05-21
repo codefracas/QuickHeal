@@ -2769,7 +2769,7 @@ function QuickHeal(Target, SpellID, extParam, forceMaxRank)
     -- Check SpellID input
     if not SpellID then
         -- No SpellID specified, find appropriate spell
-        SpellID, HealingSpellSize = FindSpellToUse(Target, "channel");
+        SpellID, HealingSpellSize = FindSpellToUse(Target, "channel", forceMaxRank);
     elseif type(SpellID) == "string" then
         -- Spell specified as string, extract name and possibly rank
         local _, _, sname, srank = string.find(SpellID, "^(..-)%s*(%d*)$")
@@ -2959,7 +2959,7 @@ function QuickHOT(Target, SpellID, extParam, forceMaxRank)
     -- Check SpellID input
     if not SpellID then
         -- No SpellID specified, find appropriate spell
-        SpellID, HealingSpellSize = FindSpellToUse(Target, "hot");
+        SpellID, HealingSpellSize = FindSpellToUse(Target, "hot", forceMaxRank);
     elseif type(SpellID) == "string" then
         -- Spell specified as string, extract name and possibly rank
         local _, _, sname, srank = string.find(SpellID, "^(..-)%s*(%d*)$")
@@ -3023,20 +3023,49 @@ function QuickHeal_Command(msg)
 
     local _, _, arg1, arg2, arg3 = string.find(msg, "%s?(%w+)%s?(%w+)%s?(%w+)")
 
-    -- Parse healing commands
-    if arg1 == "player" or arg1 == "target" or arg1 == "targettarget" or arg1 == "party" or arg1 == "subgroup" or arg1 == "mt" or arg1 == "nonmt" then
-        if arg2 == "heal" and arg3 == "max" then
-            writeLine(QuickHealData.name .. " qh " .. arg1 .. " HEAL(max rank)", 0, 1, 0);
-            QuickHeal(arg1, nil, nil, true);
-            return;
-        elseif arg2 == "hot" and arg3 == "max" then
-            writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT(max rank)", 0, 1, 0);
-            QuickHOT(arg1, nil, nil, true);
-            return;
+    -- match 3 arguments
+    if arg1 ~= nil and arg2 ~= nil and arg3 ~= nil then
+        if arg1 == "player" or arg1 == "target" or arg1 == "targettarget" or arg1 == "party" or arg1 == "subgroup" or arg1 == "mt" or arg1 == "nonmt" then
+            if arg2 == "hot" and arg3 == "max" then
+                --writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT(max rank)", 0, 1, 0);
+                QuickHOT(arg1, nil, nil, true);
+                return;
+            end
+            --QuickHeal(cmd);
         end
-        --QuickHeal(cmd);
     end
 
+    -- match 2 arguments
+    local _, _, arg4, arg5= string.find(msg, "%s?(%w+)%s?(%w+)")
+
+    if arg4 ~= nil and arg5 ~= nil then
+        if arg4 == "debug" then
+            if arg5 == "on" then
+                QHV.DebugMode = true;
+                --writeLine(QuickHealData.name .. " debug mode enabled", 0, 0, 1);
+                return;
+            elseif arg5 == "off" then
+                QHV.DebugMode = false;
+                --writeLine(QuickHealData.name .. " debug mode disabled", 0, 0, 1);
+                return;
+            end
+        end
+        if arg4 == "hot" and arg5 == "max" then
+            --writeLine(QuickHealData.name .. " HOT (max rank)", 0, 1, 0);
+            healPlayerWithLowestPercentageOfLife = 1
+            QuickHOT(nil, nil, nil, true);
+            return;
+        end
+        if arg4 == "player" or arg4 == "target" or arg4 == "targettarget" or arg4 == "party" or arg4 == "subgroup" or arg4 == "mt" or arg4 == "nonmt" then
+            if arg5 == "hot" then
+                --writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT", 0, 1, 0);
+                QuickHOT(arg1, nil, nil, false);
+                return;
+            end
+        end
+    end
+
+    -- match 1 argument
     local cmd = string.lower(msg)
 
     if cmd == "cfg" then
@@ -3054,20 +3083,6 @@ function QuickHeal_Command(msg)
         return;
     end
 
-    --[[
-    if cmd == "debug on" then
-        QHV.DebugMode = true;
-        writeLine(QuickHealData.name .. " debug mode enabled", 0, 0, 1);
-        return ;
-    end
-
-    if cmd == "debug off" then
-        QHV.DebugMode = false;
-        writeLine(QuickHealData.name .. " debug mode disabled", 0, 0, 1);
-        return ;
-    end
-    ]]--
-
     if cmd == "reset" then
         QuickHeal_SetDefaultParameters();
         writeLine(QuickHealData.name .. " reset to default configuration", 0, 0, 1);
@@ -3083,64 +3098,22 @@ function QuickHeal_Command(msg)
     end
 
     if cmd == "hot" then
-        writeLine(QuickHealData.name .. " HOT", 0, 1, 0);
+        --writeLine(QuickHealData.name .. " HOT", 0, 1, 0);
         QuickHOT();
         return;
     end
 
-    -- Parse healing commands
     if cmd == "" then
-        writeLine(QuickHealData.name .. " qh", 0, 1, 0);
+        --writeLine(QuickHealData.name .. " qh", 0, 1, 0);
         QuickHeal(nil);
         return;
     elseif cmd == "player" or cmd == "target" or cmd == "targettarget" or cmd == "party" or cmd == "subgroup" or cmd == "mt" or cmd == "nonmt" then
-        writeLine(QuickHealData.name .. " qh " .. cmd, 0, 1, 0);
+        --writeLine(QuickHealData.name .. " qh " .. cmd, 0, 1, 0);
         QuickHeal(cmd);
         return;
     end
 
-    local _, _, arg1, arg2= string.find(msg, "%s?(%w+)%s?(%w+)")
-
-    if arg1 == "debug" then
-        if arg2 == "on" then
-            QHV.DebugMode = true;
-            writeLine(QuickHealData.name .. " debug mode enabled", 0, 0, 1);
-        elseif arg2 == "off" then
-            QHV.DebugMode = false;
-            writeLine(QuickHealData.name .. " debug mode disabled", 0, 0, 1);
-        end
-        return;
-    end
-
-    if arg1 == "hot" and arg2 == "max" then
-        writeLine(QuickHealData.name .. " HOT (max rank)", 0, 1, 0);
-        --healPlayerWithLowestPercentageOfLife = 1
-        QuickHOT(nil, nil, nil, max);
-        return;
-    end
-
-    -- Parse healing commands
-    if arg1 == "player" or arg1 == "target" or arg1 == "targettarget" or arg1 == "party" or arg1 == "subgroup" or arg1 == "mt" or arg1 == "nonmt" then
-        if arg2 == "heal" then
-            writeLine(QuickHealData.name .. " qh " .. arg1 .. " HEAL", 0, 1, 0);
-            QuickHeal(arg1, nil, nil, false);
-            return;
-        --elseif arg2 == "healmax" then
-            --writeLine(QuickHealData.name .. " qh " .. arg1 .. " HEAL(max rank)", 0, 1, 0);
-            --QuickHeal(arg1, nil, nil, true);
-            --return;
-        elseif arg2 == "hot" then
-            writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT", 0, 1, 0);
-            QuickHOT(arg1, nil, nil, false);
-            return;
-        --elseif arg2 == "hotmax" then
-            --writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT(max rank)", 0, 1, 0);
-            --QuickHOT(arg1, nil, nil, true);
-            --return;
-        end
-    end
-
-    -- Print usage information
+    -- Print usage information if arguments do not match
     writeLine(QuickHealData.name .. " Usage:");
     writeLine("/qh cfg - Opens up the configuration panel.");
     writeLine("/qh toggle - Swiches between only Flashheals and or Normal Heals (Healthy Threshold 0% or 100%).");
