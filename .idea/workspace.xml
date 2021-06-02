@@ -28,7 +28,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="lua-line">
           <url>file://$PROJECT_DIR$/QuickHeal.lua</url>
-          <line>1391</line>
+          <line>1393</line>
           <option name="timeStamp" value="1" />
         </line-breakpoint>
       </breakpoints>

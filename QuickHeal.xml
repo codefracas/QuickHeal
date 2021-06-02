@@ -18,7 +18,7 @@
         </Scripts>
     </GameTooltip>
 
-    <Button name="QuickHealPriorityListEntryTemplate" hidden="true" virtual="true" >
+    <Button name="QuickHealMTListEntryTemplate" hidden="true" virtual="true" >
         <Size>
             <AbsDimension x="150" y="16"/>
         </Size>
@@ -41,10 +41,10 @@
                 this.UpdateYourself = true;
             </OnShow>
             <OnClick>
-                QH_MTPriorityListEntryTemplate_OnClick();
+                QH_MTListEntryTemplate_OnClick();
             </OnClick>
             <OnUpdate>
-                QH_MTPriorityListEntryTemplate_OnUpdate();
+                QH_MTListEntryTemplate_OnUpdate();
             </OnUpdate>
             <OnEnter>
                 <!-- Dcr_DisplayTooltip(DCR_RREMOVE_ID, this); -->
@@ -56,7 +56,7 @@
         </Scripts>
     </Button>
 
-    <GameTooltip name="QH_Display_Tooltip" hidden="true" inherits="GameTooltipTemplate" parent="QuickHealPriorityListEntryTemplate" />
+    <GameTooltip name="QH_Display_Tooltip" hidden="true" inherits="GameTooltipTemplate" parent="QuickHealMTListEntryTemplate" />
 
     <!-- Template for configuration panel tab -->
     <Button name="QuickHeal_TabButtonTemplate" virtual="true">
@@ -1900,8 +1900,8 @@
                         this:SetText(FILTER_MT_PRIORITY_SHOW);
                     </OnLoad>
                     <OnClick>
-                        <!-- Dcr_ShowHidePriorityListUI(); -->
-                        QH_ShowHideMTPriorityListUI();
+                        <!-- Dcr_ShowHideMTListUI(); -->
+                        QH_ShowHideMTListUI();
                     </OnClick>
                     <OnEnter>
                         <!-- Dcr_DisplayTooltip(DCR_PRIORITY_LIST, this); -->
@@ -2095,9 +2095,9 @@
         </Layers>
     </Frame>
 
-    <!-- MTPriorityListFrame -->
+    <!-- MTListFrame -->
 
-    <Frame name="MTPriorityListFrame" frameStrata="LOW" toplevel="true" enableMouse="true" movable="true" hidden="true"
+    <Frame name="MTListFrame" frameStrata="LOW" toplevel="true" enableMouse="true" movable="true" hidden="true"
            parent="UIParent">
         <Size>
             <AbsDimension x="150" y="230"/>
@@ -2137,7 +2137,7 @@
             </OnShow>
 
             <OnUpdate>
-                QH_PriorityListFrame_OnUpdate();
+                QH_MTListFrame_OnUpdate();
             </OnUpdate>
         </Scripts>
 
@@ -2174,12 +2174,12 @@
                         this:SetText(QH_CLR_MT_PRIO);
                     </OnLoad>
                     <OnClick>
-                        QH_ClearMTPriorityList();
+                        QH_ClearMTList();
                     </OnClick>
                     <OnEnter>
                         <!-- Dcr_DisplayTooltip(BINDING_NAME_DCRPRCLEAR, this); -->
                         GameTooltip:SetOwner(this,"ANCHOR_TOPLEFT");
-                        GameTooltip:SetText("Clear the MT priority list")
+                        GameTooltip:SetText("Clear the MT list")
                         this.tooltipShown = true;
                     </OnEnter>
                     <OnLeave>
@@ -2202,7 +2202,7 @@
                     </OnClick>
                     <OnEnter>
                         GameTooltip:SetOwner(this,"ANCHOR_TOPLEFT");
-                        GameTooltip:SetText("Hide the MT priority list")
+                        GameTooltip:SetText("Hide the MT list")
                         this.tooltipShown = true;
                     </OnEnter>
                     <OnLeave>
@@ -2248,13 +2248,13 @@
                 </Anchors>
                 <Scripts>
                     <OnClick>
-                        <!-- Dcr_AddTargetToPriorityList(); -->
-                        QH_AddTargetToMTPriorityList();
+                        <!-- Dcr_AddTargetToMTList(); -->
+                        QH_AddTargetToMTList();
                     </OnClick>
                     <OnEnter>
                         <!-- Dcr_DisplayTooltip(BINDING_NAME_DCRPRADD, this); -->
                         GameTooltip:SetOwner(this,"ANCHOR_TOPLEFT");
-                        GameTooltip:SetText("Add target to the MT priority list")
+                        GameTooltip:SetText("Add target to the MT list")
                         this.tooltipShown = true;
                     </OnEnter>
                     <OnLeave>
@@ -2309,7 +2309,7 @@
                 </Scripts>
             </Button>
 
-            <Button name="$parentIndex01" id="1" inherits="QuickHealPriorityListEntryTemplate">
+            <Button name="$parentIndex01" id="1" inherits="QuickHealMTListEntryTemplate">
                 <Anchors>
                     <Anchor point="TOPLEFT" relativePoint="TOPLEFT" relativeTo="$parent">
                         <Offset>
@@ -2318,47 +2318,47 @@
                     </Anchor>
                 </Anchors>
             </Button>
-            <Button name="$parentIndex02" id="2" inherits="QuickHealPriorityListEntryTemplate">
+            <Button name="$parentIndex02" id="2" inherits="QuickHealMTListEntryTemplate">
                 <Anchors>
                     <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentIndex01"/>
                 </Anchors>
             </Button>
-            <Button name="$parentIndex03" id="3" inherits="QuickHealPriorityListEntryTemplate">
+            <Button name="$parentIndex03" id="3" inherits="QuickHealMTListEntryTemplate">
                 <Anchors>
                     <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentIndex02"/>
                 </Anchors>
             </Button>
-            <Button name="$parentIndex04" id="4" inherits="QuickHealPriorityListEntryTemplate">
+            <Button name="$parentIndex04" id="4" inherits="QuickHealMTListEntryTemplate">
                 <Anchors>
                     <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentIndex03"/>
                 </Anchors>
             </Button>
-            <Button name="$parentIndex05" id="5" inherits="QuickHealPriorityListEntryTemplate">
+            <Button name="$parentIndex05" id="5" inherits="QuickHealMTListEntryTemplate">
                 <Anchors>
                     <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentIndex04"/>
                 </Anchors>
             </Button>
-            <Button name="$parentIndex06" id="6" inherits="QuickHealPriorityListEntryTemplate">
+            <Button name="$parentIndex06" id="6" inherits="QuickHealMTListEntryTemplate">
                 <Anchors>
                     <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentIndex05"/>
                 </Anchors>
             </Button>
-            <Button name="$parentIndex07" id="7" inherits="QuickHealPriorityListEntryTemplate">
+            <Button name="$parentIndex07" id="7" inherits="QuickHealMTListEntryTemplate">
                 <Anchors>
                     <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentIndex06"/>
                 </Anchors>
             </Button>
-            <Button name="$parentIndex08" id="8" inherits="QuickHealPriorityListEntryTemplate">
+            <Button name="$parentIndex08" id="8" inherits="QuickHealMTListEntryTemplate">
                 <Anchors>
                     <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentIndex07"/>
                 </Anchors>
             </Button>
-            <Button name="$parentIndex09" id="9" inherits="QuickHealPriorityListEntryTemplate">
+            <Button name="$parentIndex09" id="9" inherits="QuickHealMTListEntryTemplate">
                 <Anchors>
                     <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentIndex08"/>
                 </Anchors>
             </Button>
-            <Button name="$parentIndex10" id="10" inherits="QuickHealPriorityListEntryTemplate">
+            <Button name="$parentIndex10" id="10" inherits="QuickHealMTListEntryTemplate">
                 <Anchors>
                     <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentIndex09"/>
                 </Anchors>
