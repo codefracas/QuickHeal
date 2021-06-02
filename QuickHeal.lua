@@ -68,7 +68,6 @@ QH_Saved = {
     -- this is the priority list of people to cure
     PriorityList = { };
     SkipList = { }
-
 };
 ]]--
 
