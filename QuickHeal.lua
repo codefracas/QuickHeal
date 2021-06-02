@@ -19,7 +19,7 @@ local OriginalUIErrorsFrame_OnEvent;
 
 --[ Settings ]--
 QuickHealVariables = {};
-local QHV; -- Local alias
+QHV = { }; -- global alias
 local DQHV = { -- Default values
     DebugMode = false,
     PetPriority = 1,
@@ -58,16 +58,19 @@ local DQHV = { -- Default values
     FilterRaidGroup7 = false,
     FilterRaidGroup8 = false,
     DisplayHealingBar = true,
-    QuickClickEnabled = true
+    QuickClickEnabled = true,
+    PriorityList = { },
+    SkipList = { }
 }
 
---[ Priority List Variables ]--
+--[[ Priority List Variables ]--
 QH_Saved = {
     -- this is the priority list of people to cure
     PriorityList = { };
     SkipList = { }
 
 };
+]]--
 
 --[ Monitor variables ]--
 local MassiveOverhealInProgress = false;
@@ -463,7 +466,7 @@ end --}}}
 
 function QH_ClearMTPriorityList()
     --{{{
-    QH_Saved.PriorityList = {};
+    QHV.PriorityList = {};
 
     MTPriorityListFrame.UpdateYourself = true;
 end --}}}
@@ -479,12 +482,12 @@ function QH_AddUnitToMTPriorityList(unit)
     if (UnitExists(unit)) then
         if (UnitIsPlayer(unit)) then
             local name = (UnitName(unit));
-            for _, pname in QH_Saved.PriorityList do
+            for _, pname in QHV.PriorityList do
                 if (name == pname) then
                     return ;
                 end
             end
-            table.insert(QH_Saved.PriorityList, name);
+            table.insert(QHV.PriorityList, name);
         end
         MTPriorityListFrame.UpdateYourself = true;
     end
@@ -515,9 +518,9 @@ function QH_MTPriorityListEntryTemplate_OnUpdate()
         if (id) then
             local name
             if (this.Priority) then
-                name = QH_Saved.PriorityList[id];
+                name = QHV.PriorityList[id];
             else
-                name = QH_Saved.SkipList[id];
+                name = QHV.SkipList[id];
             end
             if (name) then
                 NameText:SetText(id .. " - " .. name);
@@ -533,13 +536,13 @@ end --}}}
 
 function QH_RemoveIDFromMTPriorityList(id)
     --{{{
-    table.remove(QH_Saved.PriorityList, id);
+    table.remove(QHV.PriorityList, id);
     MTPriorityListFrame.UpdateYourself = true;
 end --}}}
 
 function QH_RemoveIDFromSkipList(id)
     --{{{
-    --table.remove( QH_Saved.SkipList,id);
+    --table.remove( QHV.SkipList,id);
     --DecursiveSkipListFrame.UpdateYourself = true;
 end --}}}
 
@@ -560,7 +563,7 @@ function QH_PriorityListFrame_OnUpdate()
         local up = getglobal(baseName .. "Up");
         local down = getglobal(baseName .. "Down");
 
-        local size = table.getn(QH_Saved.PriorityList);
+        local size = table.getn(QHV.PriorityList);
 
         if (size < 11) then
             this.Offset = 0;
@@ -1341,7 +1344,7 @@ end
 -- If number is given, will only return true if the unit is that specific main tank
 local function IsMainTank(unit, number)
     local t, y;
-    for t, y in pairs(QH_Saved.PriorityList)
+    for t, y in pairs(QHV.PriorityList)
     do
         if y == UnitName(unit) then
             return true;
@@ -2739,7 +2742,7 @@ function QuickHeal(Target, SpellID, extParam, forceMaxRank)
                     --    break ;
                     --end
                     local t, y;
-                    for t, y in pairs(QH_Saved.PriorityList) do
+                    for t, y in pairs(QHV.PriorityList) do
                         tanks = true;
                         break ;
                     end
@@ -2929,7 +2932,7 @@ function QuickHOT(Target, SpellID, extParam, forceMaxRank)
                     --    break ;
                     --end
                     local t, y;
-                    for t, y in pairs(QH_Saved.PriorityList) do
+                    for t, y in pairs(QHV.PriorityList) do
                         tanks = true;
                         break ;
                     end
