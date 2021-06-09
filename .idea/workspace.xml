@@ -18,17 +18,17 @@
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="4901" y="456" key="FileChooserDialogImpl" timestamp="1613075541145">
+    <state x="4783" y="315" key="search.everywhere.popup" timestamp="1622682490819">
       <screen x="3840" y="0" width="2560" height="1400" />
     </state>
-    <state x="4901" y="456" key="FileChooserDialogImpl/0.0.2560.1400/3840.0.2560.1400@3840.0.2560.1400" timestamp="1613075541145" />
+    <state x="4783" y="315" key="search.everywhere.popup/0.0.2560.1400/3840.0.2560.1400@3840.0.2560.1400" timestamp="1622682490819" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" type="lua-line">
           <url>file://$PROJECT_DIR$/QuickHeal.lua</url>
-          <line>1393</line>
+          <line>1795</line>
           <option name="timeStamp" value="1" />
         </line-breakpoint>
       </breakpoints>

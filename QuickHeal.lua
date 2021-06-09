@@ -60,7 +60,7 @@ local DQHV = { -- Default values
     DisplayHealingBar = true,
     QuickClickEnabled = true,
     MTList = { },
-    MeeleeDPSList = { },
+    MeleeDPSList = { },
     HealerList = { },
     RangedDPSList = { },
     SkipList = { }
@@ -457,6 +457,8 @@ function GroupstatusInt()
     return group
 end
 
+--[ MTList BEGIN ]--
+
 function QH_ShowHideMTListUI()
     --{{{
     if (MTListFrame:IsVisible()) then
@@ -535,25 +537,10 @@ function QH_MTListEntryTemplate_OnUpdate()
     end
 end --}}}
 
-
 function QH_RemoveIDFromMTList(id)
     --{{{
     table.remove(QHV.MTList, id);
     MTListFrame.UpdateYourself = true;
-end --}}}
-
-function QH_RemoveIDFromSkipList(id)
-    --{{{
-    --table.remove( QHV.SkipList,id);
-    --DecursiveSkipListFrame.UpdateYourself = true;
-end --}}}
-
-function QH_DisplayTooltip(Message, RelativeTo)
-    --{{{
-    QH_Display_Tooltip:SetOwner(RelativeTo, "ANCHOR_TOPRIGHT");
-    QH_Display_Tooltip:ClearLines();
-    QH_Display_Tooltip:SetText(Message);
-    QH_Display_Tooltip:Show();
 end --}}}
 
 function QH_MTListFrame_OnUpdate()
@@ -607,30 +594,445 @@ function QH_MTListFrame_OnUpdate()
 
 end --}}}
 
+--[ MTList END ]--
+
+--[ MeleeDPSList BEGIN ]--
+
+function QH_ShowHideMeleeDPSListUI()
+    --{{{
+    if (MeleeDPSListFrame:IsVisible()) then
+        MeleeDPSListFrame:Hide();
+    else
+        MeleeDPSListFrame:Show();
+    end
+end --}}}
+
+function QH_ClearMeleeDPSList()
+    --{{{
+    QHV.MeleeDPSList = {};
+
+    MeleeDPSListFrame.UpdateYourself = true;
+end --}}}
+
+function QH_AddTargetToMeleeDPSList()
+    --{{{
+    --Dcr_debug( "Adding the target to the priority list");
+    QH_AddUnitToMeleeDPSList("target");
+end --}}}
+
+function QH_AddUnitToMeleeDPSList(unit)
+    --{{{
+    if (UnitExists(unit)) then
+        if (UnitIsPlayer(unit)) then
+            local name = (UnitName(unit));
+            for _, pname in QHV.MeleeDPSList do
+                if (name == pname) then
+                    return ;
+                end
+            end
+            table.insert(QHV.MeleeDPSList, name);
+        end
+        MeleeDPSListFrame.UpdateYourself = true;
+    end
+end --}}}
+
+function QH_MeleeDPSListEntryTemplate_OnClick()
+    --{{{
+    local id = this:GetID();
+    if (id) then
+        if (this.Priority) then
+            QH_RemoveIDFromMeleeDPSList(id);
+        else
+            QH_RemoveIDFromSkipList(id);
+        end
+    end
+    this.UpdateYourself = true;
+
+end --}}}
+
+function QH_MeleeDPSListEntryTemplate_OnUpdate()
+    --{{{
+    if (this.UpdateYourself) then
+        this.UpdateYourself = false;
+        local baseName = this:GetName();
+        local NameText = getglobal(baseName .. "Name");
+
+        local id = this:GetID();
+        if (id) then
+            local name
+            if (this.Priority) then
+                name = QHV.MeleeDPSList[id];
+            else
+                name = QHV.SkipList[id];
+            end
+            if (name) then
+                NameText:SetText(id .. " - " .. name);
+                --else
+                --    NameText:SetText("Error - ID Invalid!");
+            end
+        else
+            NameText:SetText("Error - No ID!");
+        end
+    end
+end --}}}
+
+function QH_RemoveIDFromMeleeDPSList(id)
+    --{{{
+    table.remove(QHV.MeleeDPSList, id);
+    MeleeDPSListFrame.UpdateYourself = true;
+end --}}}
+
+function QH_MeleeDPSListFrame_OnUpdate()
+    --{{{
+    if (this.UpdateYourself) then
+        this.UpdateYourself = false;
+        --Dcr_Groups_datas_are_invalid = true;
+        local baseName = this:GetName();
+        local up = getglobal(baseName .. "Up");
+        local down = getglobal(baseName .. "Down");
+
+        local size = table.getn(QHV.MeleeDPSList);
+
+        if (size < 11) then
+            this.Offset = 0;
+            up:Hide();
+            down:Hide();
+        else
+            if (this.Offset <= 0) then
+                this.Offset = 0;
+                up:Hide();
+                down:Show();
+            elseif (this.Offset >= (size - 10)) then
+                this.Offset = (size - 10);
+                up:Show();
+                down:Hide();
+            else
+                up:Show();
+                down:Show();
+            end
+        end
+
+        local i;
+        for i = 1, 10 do
+            local id = "" .. i;
+            if (i < 10) then
+                id = "0" .. i;
+            end
+            local btn = getglobal(baseName .. "Index" .. id);
+
+            btn:SetID(i + this.Offset);
+            btn.UpdateYourself = true;
+
+            if (i <= size) then
+                btn:Show();
+            else
+                btn:Hide();
+            end
+        end
+    end
+
+end --}}}
+
+--[ MeleeDPSList END ]--
+
+--[ RangedDPSList BEGIN ]--
+
+function QH_ShowHideRangedDPSListUI()
+    --{{{
+    if (RangedDPSListFrame:IsVisible()) then
+        RangedDPSListFrame:Hide();
+    else
+        RangedDPSListFrame:Show();
+    end
+end --}}}
+
+function QH_ClearRangedDPSList()
+    --{{{
+    QHV.RangedDPSList = {};
+
+    RangedDPSListFrame.UpdateYourself = true;
+end --}}}
+
+function QH_AddTargetToRangedDPSList()
+    --{{{
+    --Dcr_debug( "Adding the target to the priority list");
+    QH_AddUnitToRangedDPSList("target");
+end --}}}
+
+function QH_AddUnitToRangedDPSList(unit)
+    --{{{
+    if (UnitExists(unit)) then
+        if (UnitIsPlayer(unit)) then
+            local name = (UnitName(unit));
+            for _, pname in QHV.RangedDPSList do
+                if (name == pname) then
+                    return ;
+                end
+            end
+            table.insert(QHV.RangedDPSList, name);
+        end
+        RangedDPSListFrame.UpdateYourself = true;
+    end
+end --}}}
+
+function QH_RangedDPSListEntryTemplate_OnClick()
+    --{{{
+    local id = this:GetID();
+    if (id) then
+        if (this.Priority) then
+            QH_RemoveIDFromRangedDPSList(id);
+        else
+            QH_RemoveIDFromSkipList(id);
+        end
+    end
+    this.UpdateYourself = true;
+
+end --}}}
+
+function QH_RangedDPSListEntryTemplate_OnUpdate()
+    --{{{
+    if (this.UpdateYourself) then
+        this.UpdateYourself = false;
+        local baseName = this:GetName();
+        local NameText = getglobal(baseName .. "Name");
+
+        local id = this:GetID();
+        if (id) then
+            local name
+            if (this.Priority) then
+                name = QHV.RangedDPSList[id];
+            else
+                name = QHV.SkipList[id];
+            end
+            if (name) then
+                NameText:SetText(id .. " - " .. name);
+                --else
+                --    NameText:SetText("Error - ID Invalid!");
+            end
+        else
+            NameText:SetText("Error - No ID!");
+        end
+    end
+end --}}}
+
+function QH_RemoveIDFromRangedDPSList(id)
+    --{{{
+    table.remove(QHV.RangedDPSList, id);
+    RangedDPSListFrame.UpdateYourself = true;
+end --}}}
+
+function QH_RangedDPSListFrame_OnUpdate()
+    --{{{
+    if (this.UpdateYourself) then
+        this.UpdateYourself = false;
+        --Dcr_Groups_datas_are_invalid = true;
+        local baseName = this:GetName();
+        local up = getglobal(baseName .. "Up");
+        local down = getglobal(baseName .. "Down");
+
+        local size = table.getn(QHV.RangedDPSList);
+
+        if (size < 11) then
+            this.Offset = 0;
+            up:Hide();
+            down:Hide();
+        else
+            if (this.Offset <= 0) then
+                this.Offset = 0;
+                up:Hide();
+                down:Show();
+            elseif (this.Offset >= (size - 10)) then
+                this.Offset = (size - 10);
+                up:Show();
+                down:Hide();
+            else
+                up:Show();
+                down:Show();
+            end
+        end
+
+        local i;
+        for i = 1, 10 do
+            local id = "" .. i;
+            if (i < 10) then
+                id = "0" .. i;
+            end
+            local btn = getglobal(baseName .. "Index" .. id);
+
+            btn:SetID(i + this.Offset);
+            btn.UpdateYourself = true;
+
+            if (i <= size) then
+                btn:Show();
+            else
+                btn:Hide();
+            end
+        end
+    end
+
+end --}}}
+
+--[ RangedDPSList END ]--
+
+--[ HealerList BEGIN ]--
+
+function QH_ShowHideHealerListUI()
+    --{{{
+    if (HealerListFrame:IsVisible()) then
+        HealerListFrame:Hide();
+    else
+        HealerListFrame:Show();
+    end
+end --}}}
+
+function QH_ClearHealerList()
+    --{{{
+    QHV.HealerList = {};
+
+    HealerListFrame.UpdateYourself = true;
+end --}}}
+
+function QH_AddTargetToHealerList()
+    --{{{
+    --Dcr_debug( "Adding the target to the priority list");
+    QH_AddUnitToHealerList("target");
+end --}}}
+
+function QH_AddUnitToHealerList(unit)
+    --{{{
+    if (UnitExists(unit)) then
+        if (UnitIsPlayer(unit)) then
+            local name = (UnitName(unit));
+            for _, pname in QHV.HealerList do
+                if (name == pname) then
+                    return ;
+                end
+            end
+            table.insert(QHV.HealerList, name);
+        end
+        HealerListFrame.UpdateYourself = true;
+    end
+end --}}}
+
+function QH_HealerListEntryTemplate_OnClick()
+    --{{{
+    local id = this:GetID();
+    if (id) then
+        if (this.Priority) then
+            QH_RemoveIDFromHealerList(id);
+        else
+            QH_RemoveIDFromSkipList(id);
+        end
+    end
+    this.UpdateYourself = true;
+
+end --}}}
+
+function QH_HealerListEntryTemplate_OnUpdate()
+    --{{{
+    if (this.UpdateYourself) then
+        this.UpdateYourself = false;
+        local baseName = this:GetName();
+        local NameText = getglobal(baseName .. "Name");
+
+        local id = this:GetID();
+        if (id) then
+            local name
+            if (this.Priority) then
+                name = QHV.HealerList[id];
+            else
+                name = QHV.SkipList[id];
+            end
+            if (name) then
+                NameText:SetText(id .. " - " .. name);
+                --else
+                --    NameText:SetText("Error - ID Invalid!");
+            end
+        else
+            NameText:SetText("Error - No ID!");
+        end
+    end
+end --}}}
+
+function QH_RemoveIDFromHealerList(id)
+    --{{{
+    table.remove(QHV.HealerList, id);
+    HealerListFrame.UpdateYourself = true;
+end --}}}
+
+function QH_HealerListFrame_OnUpdate()
+    --{{{
+    if (this.UpdateYourself) then
+        this.UpdateYourself = false;
+        --Dcr_Groups_datas_are_invalid = true;
+        local baseName = this:GetName();
+        local up = getglobal(baseName .. "Up");
+        local down = getglobal(baseName .. "Down");
+
+        local size = table.getn(QHV.HealerList);
+
+        if (size < 11) then
+            this.Offset = 0;
+            up:Hide();
+            down:Hide();
+        else
+            if (this.Offset <= 0) then
+                this.Offset = 0;
+                up:Hide();
+                down:Show();
+            elseif (this.Offset >= (size - 10)) then
+                this.Offset = (size - 10);
+                up:Show();
+                down:Hide();
+            else
+                up:Show();
+                down:Show();
+            end
+        end
+
+        local i;
+        for i = 1, 10 do
+            local id = "" .. i;
+            if (i < 10) then
+                id = "0" .. i;
+            end
+            local btn = getglobal(baseName .. "Index" .. id);
+
+            btn:SetID(i + this.Offset);
+            btn.UpdateYourself = true;
+
+            if (i <= size) then
+                btn:Show();
+            else
+                btn:Hide();
+            end
+        end
+    end
+
+end --}}}
+
+--[ HealerList END ]--
+
+function QH_RemoveIDFromSkipList(id)
+    --{{{
+    --table.remove( QHV.SkipList,id);
+    --DecursiveSkipListFrame.UpdateYourself = true;
+end --}}}
+
+function QH_DisplayTooltip(Message, RelativeTo)
+    --{{{
+    QH_Display_Tooltip:SetOwner(RelativeTo, "ANCHOR_TOPRIGHT");
+    QH_Display_Tooltip:ClearLines();
+    QH_Display_Tooltip:SetText(Message);
+    QH_Display_Tooltip:Show();
+end --}}}
+
 function QH_Debug(a)
     --{{{
     if DEFAULT_CHAT_FRAME then
         DEFAULT_CHAT_FRAME:AddMessage(a)
     end
 end --}}}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 --[ Utilities ]--
 

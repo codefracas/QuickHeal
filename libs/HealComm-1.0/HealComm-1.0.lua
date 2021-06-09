@@ -980,13 +980,14 @@ HealComm.Debuffs = {
 }
 	
 local function getSetBonus()
-	healcommTip:SetInventoryItem("player", 1)
-	local text = getglobal("healcommTipTextLeft"..healcommTip:NumLines()):GetText()
-	if text == L["Set: Increases the duration of your Rejuvenation spell by 3 sec."] or text == L["Set: Increases the duration of your Renew spell by 3 sec."] then
-		return true
-	else
-		return nil
-	end
+	--healcommTip:SetInventoryItem("player", 1)
+	--local text = getglobal("healcommTipTextLeft"..healcommTip:NumLines()):GetText()
+	--if text == L["Set: Increases the duration of your Rejuvenation spell by 3 sec."] or text == L["Set: Increases the duration of your Renew spell by 3 sec."] then
+	--	return true
+	--else
+	--	return nil
+	--end
+	return nil
 end
 	
 function HealComm:GetBuffSpellPower()
