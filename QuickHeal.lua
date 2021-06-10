@@ -3210,11 +3210,11 @@ function QuickHeal_Command(msg)
         if arg4 == "debug" then
             if arg5 == "on" then
                 QHV.DebugMode = true;
-                --writeLine(QuickHealData.name .. " debug mode enabled", 0, 0, 1);
+                writeLine(QuickHealData.name .. " debug mode enabled", 0, 0, 1);
                 return;
             elseif arg5 == "off" then
                 QHV.DebugMode = false;
-                --writeLine(QuickHealData.name .. " debug mode disabled", 0, 0, 1);
+                writeLine(QuickHealData.name .. " debug mode disabled", 0, 0, 1);
                 return;
             end
         end
