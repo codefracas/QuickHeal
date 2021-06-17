@@ -24,6 +24,7 @@ function QuickHeal_Priest_FindSpellToUse(Target, healType, forceMaxRank)
         return SpellID,HealSize;
     end
 
+
     -- +Healing-PenaltyFactor = (1-((20-LevelLearnt)*0.0375)) for all spells learnt before level 20
     local PF1 = 0.2875;
     local PF4 = 0.4;
@@ -129,9 +130,13 @@ function QuickHeal_Priest_FindSpellToUse(Target, healType, forceMaxRank)
     end
 
     -- if healType = channel
-    jgpprint(healType)
+    --jgpprint(healType)
 
-    if healType == "channel" then
+    if healType == "channel" and forceMaxRank then
+        SpellID = SpellIDsGH[5]; HealSize = 2080*shMod+healMod30;
+    end
+
+    if healType == "channel" and not forceMaxRank then
         jgpprint("CHANNEL HEAL: " .. healType)
         -- Find suitable SpellID based on the defined criteria
         if not InCombat or TargetIsHealthy or maxRankFH<1 then

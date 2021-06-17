@@ -23,15 +23,4 @@
     </state>
     <state x="4783" y="315" key="search.everywhere.popup/0.0.2560.1400/3840.0.2560.1400@3840.0.2560.1400" timestamp="1622682490819" />
   </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="lua-line">
-          <url>file://$PROJECT_DIR$/QuickHeal.lua</url>
-          <line>1795</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
-  </component>
 </project>
