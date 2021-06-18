@@ -875,7 +875,7 @@ local function Initialise()
         FindHoTSpellToUse = QuickHeal_Priest_FindHoTSpellToUse;
         GetRatioHealthyExplanation = QuickHeal_Priest_GetRatioHealthyExplanation;
     elseif PlayerClass == "paladin" then
-        FindSpellToUse = QuickHeal_Paladin_FindSpellToUse;
+        FindHealSpellToUse = QuickHeal_Paladin_FindSpellToUse;
         GetRatioHealthyExplanation = QuickHeal_Paladin_GetRatioHealthyExplanation;
         -- convert default (priest) downrank window to Paladin with only FH Slider shown
         QuickHealDownrank_Slider_NH:Hide();
