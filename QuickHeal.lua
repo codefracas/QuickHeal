@@ -82,6 +82,7 @@ local HealingTarget; -- Contains the unitID of the last player that was attempte
 local BlackList = {}; -- List of times were the players are no longer blacklisted
 local LastBlackListTime = 0;
 local HealMultiplier = 1.0;
+local PlayerClass;
 
 --[ Keybinding ]--
 BINDING_HEADER_QUICKHEAL = "QuickHeal";
@@ -152,6 +153,20 @@ function UnitHasRenew(unit)
         local B = UnitBuff(unit, j);
         if B then
             if B == BRenew then
+                return true
+                --break
+            end
+        end
+    end
+    return false
+end
+
+function UnitHasRejuvenation(unit)
+    local BRejuv = 'Interface\\Icons\\Spell_Nature_Rejuvenation'
+    for j = 1, 40 do
+        local B = UnitBuff(unit, j);
+        if B then
+            if B == BRejuv then
                 return true
                 --break
             end
@@ -888,7 +903,8 @@ local function Initialise()
         QuickHealDownrank_Slider_FH:SetValue(6)
         QuickHealDownrank_RankNumberBot:SetPoint("CENTER", 108, 1)
     elseif PlayerClass == "druid" then
-        FindSpellToUse = QuickHeal_Druid_FindSpellToUse;
+        FindHealSpellToUse = QuickHeal_Druid_FindHealSpellToUse;
+        FindHoTSpellToUse = QuickHeal_Druid_FindHoTSpellToUse;
         GetRatioHealthyExplanation = QuickHeal_Druid_GetRatioHealthyExplanation;
     else
         writeLine(QuickHealData.name .. " " .. QuickHealData.version .. " does not support " .. UnitClass('player') .. ". " .. QuickHealData.name .. " not loaded.")
@@ -2014,8 +2030,14 @@ local function FindWhoToHOT(Restrict, extParam)
     local selfPercentage = (UnitHealth('player') + HealComm:getHeal('player')) / UnitHealthMax('player');
     if (selfPercentage < QHV.RatioForceself) and (selfPercentage < QHV.RatioFull) then
         QuickHeal_debug("********** Self Preservation **********");
-        if not UnitHasRenew('player') then
-            return 'player';
+        if PlayerClass == "priest" then
+            if not UnitHasRenew('player') then
+                return 'player';
+            end
+        elseif PlayerClass == "druid" then
+            if not UnitHasRejuvenation('player') then
+                return 'player';
+            end
         end
     end
 
@@ -2023,8 +2045,14 @@ local function FindWhoToHOT(Restrict, extParam)
     if QHV.TargetPriority and QuickHeal_UnitHasHealthInfo('target') then
         if (UnitHealth('target') / UnitHealthMax('target')) < QHV.RatioFull then
             QuickHeal_debug("********** Target Priority **********");
-            if not UnitHasRenew('target') then
-                return 'target';
+            if PlayerClass == "priest" then
+                if not UnitHasRenew('target') then
+                    return 'target';
+                end
+            elseif PlayerClass == "druid" then
+                if not UnitHasRejuvenation('target') then
+                    return 'target';
+                end
             end
         end
     end
@@ -2150,6 +2178,7 @@ local function FindWhoToHOT(Restrict, extParam)
                                 end
                             else
                                 if PredictedMissingHealth > healingTargetMissinHealth then
+
                                     if not UnitHasRenew(unit) then
                                         healingTarget = unit;
                                         healingTargetMissinHealth = PredictedMissingHealth;
@@ -2173,11 +2202,26 @@ local function FindWhoToHOT(Restrict, extParam)
                                 end
                             end
                         elseif PlayerClass == "druid" then
-                            if PredictedHealthPct < healingTargetHealthPct then
-                                healingTarget = unit;
-                                healingTargetHealthPct = PredictedHealthPct;
-                                AllPlayersAreFull = false;
+
+                            if healPlayerWithLowestPercentageOfLife == 1 then
+                                if PredictedHealthPct < healingTargetHealthPct then
+                                    if not UnitHasRejuvenation(unit) then
+                                        healingTarget = unit;
+                                        healingTargetHealthPct = PredictedHealthPct;
+                                        AllPlayersAreFull = false;
+                                    end
+                                end
+                            else
+                                if PredictedMissingHealth > healingTargetMissinHealth then
+
+                                    if not UnitHasRejuvenation(unit) then
+                                        healingTarget = unit;
+                                        healingTargetMissinHealth = PredictedMissingHealth;
+                                        AllPlayersAreFull = false;
+                                    end
+                                end
                             end
+
                         else
                             writeLine(QuickHealData.name .. " " .. QuickHealData.version .. " does not support " .. UnitClass('player') .. ". " .. QuickHealData.name .. " not loaded.")
                             return ;
@@ -3018,7 +3062,7 @@ function QuickHOT(Target, SpellID, extParam, forceMaxRank)
 
     -- JGP debug
     --jgpprint("---------------------------------------------");
-    --jgpprint(SpellID);
+    jgpprint(tostring(SpellID));
     --SpellID = 25315;
 
     if SpellID then
