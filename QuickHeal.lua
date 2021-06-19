@@ -161,7 +161,7 @@ function UnitHasRenew(unit)
     return false
 end
 
-function UnitHasRejuvenation(unit)
+function UnitHasRejuvenation(unit) --
     local BRejuv = 'Interface\\Icons\\Spell_Nature_Rejuvenation'
     for j = 1, 40 do
         local B = UnitBuff(unit, j);
