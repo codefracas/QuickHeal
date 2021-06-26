@@ -3648,12 +3648,12 @@ function QuickHeal_Command(msg)
     if arg1 ~= nil and arg2 ~= nil and arg3 ~= nil then
         if arg1 == "player" or arg1 == "target" or arg1 == "targettarget" or arg1 == "party" or arg1 == "subgroup" or arg1 == "mt" or arg1 == "nonmt" then
             if arg2 == "hot" and arg3 == "fh" then
-                writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT(max rank & no hp check)", 0, 1, 0);
+                --writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT(max rank & no hp check)", 0, 1, 0);
                 QuickHOT(arg1, nil, nil, true, true);
                 return;
             end
             if arg2 == "hot" and arg3 == "max" then
-                writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT(max rank)", 0, 1, 0);
+                --writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT(max rank)", 0, 1, 0);
                 QuickHOT(arg1, nil, nil, true, false);
                 return;
             end
@@ -3669,29 +3669,29 @@ function QuickHeal_Command(msg)
         if arg4 == "debug" then
             if arg5 == "on" then
                 QHV.DebugMode = true;
-                writeLine(QuickHealData.name .. " debug mode enabled", 0, 0, 1);
+                --writeLine(QuickHealData.name .. " debug mode enabled", 0, 0, 1);
                 return;
             elseif arg5 == "off" then
                 QHV.DebugMode = false;
-                writeLine(QuickHealData.name .. " debug mode disabled", 0, 0, 1);
+                --writeLine(QuickHealData.name .. " debug mode disabled", 0, 0, 1);
                 return;
             end
         end
         if arg4 == "hot" and arg5 == "max" then
-            writeLine(QuickHealData.name .. " HOT (max rank)", 0, 1, 0);
+            --writeLine(QuickHealData.name .. " HOT (max rank)", 0, 1, 0);
             healPlayerWithLowestPercentageOfLife = 1
             QuickHOT(nil, nil, nil, true, false);
             return;
         end
         if arg4 == "hot" and arg5 == "fh" then
-            writeLine(QuickHealData.name .. " FH (max rank & no hp check)", 0, 1, 0);
+            --writeLine(QuickHealData.name .. " FH (max rank & no hp check)", 0, 1, 0);
             healPlayerWithLowestPercentageOfLife = 1
             QuickHOT(nil, nil, nil, true, true);
             return;
         end
         if arg4 == "player" or arg4 == "target" or arg4 == "targettarget" or arg4 == "party" or arg4 == "subgroup" or arg4 == "mt" or arg4 == "nonmt" then
             if arg5 == "hot" then
-                writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT", 0, 1, 0);
+                --writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT", 0, 1, 0);
                 QuickHOT(arg1, nil, nil, false, false);
                 return;
             end
@@ -3731,7 +3731,7 @@ function QuickHeal_Command(msg)
     end
 
     if cmd == "hot" then
-        writeLine(QuickHealData.name .. " HOT", 0, 1, 0);
+        --writeLine(QuickHealData.name .. " HOT", 0, 1, 0);
         QuickHOT();
         return;
     end
