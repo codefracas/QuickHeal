@@ -2019,7 +2019,7 @@ local function FindWhoToHeal(Restrict, extParam)
     return healingTarget;
 end
 
-local function FindWhoToHOT(Restrict, extParam)
+local function FindWhoToHOT(Restrict, extParam, noHpCheck)
     local playerIds = {};
     local petIds = {};
     local i;
@@ -2041,6 +2041,7 @@ local function FindWhoToHOT(Restrict, extParam)
         end
     end
 
+    --[[
     -- Target Priority
     if QHV.TargetPriority and QuickHeal_UnitHasHealthInfo('target') then
         if (UnitHealth('target') / UnitHealthMax('target')) < QHV.RatioFull then
@@ -2056,6 +2057,7 @@ local function FindWhoToHOT(Restrict, extParam)
             end
         end
     end
+    ]]--
 
     -- Heal party/raid etc.
     local RestrictParty = false;
@@ -2150,83 +2152,114 @@ local function FindWhoToHOT(Restrict, extParam)
                 if SpellCanTargetUnit(unit) then
                     QuickHeal_debug(string.format("%s (%s) : %d/%d", UnitFullName(unit), unit, UnitHealth(unit), UnitHealthMax(unit)));
 
-                    --Get who to heal for different classes
+                    local _, PlayerClass = UnitClass('player');
+                    PlayerClass = string.lower(PlayerClass);
+
                     local IncHeal = HealComm:getHeal(UnitName(unit))
                     local PredictedHealth = (UnitHealth(unit) + IncHeal)
                     local PredictedHealthPct = (UnitHealth(unit) + IncHeal) / UnitHealthMax(unit);
                     local PredictedMissingHealth = UnitHealthMax(unit) - UnitHealth(unit) - IncHeal;
 
-                    if PredictedHealthPct < QHV.RatioFull then
-                        local _, PlayerClass = UnitClass('player');
-                        PlayerClass = string.lower(PlayerClass);
-
-                        if PlayerClass == "shaman" then
-                            if PredictedHealthPct < healingTargetHealthPct then
-                                healingTarget = unit;
-                                healingTargetHealthPct = PredictedHealthPct;
-                                AllPlayersAreFull = false;
-                            end
-                        elseif PlayerClass == "priest" then
-                            --writeLine("Find who to heal for Priest");
-                            if healPlayerWithLowestPercentageOfLife == 1 then
-                                if PredictedHealthPct < healingTargetHealthPct then
-                                    if not UnitHasRenew(unit) then
-                                        healingTarget = unit;
-                                        healingTargetHealthPct = PredictedHealthPct;
-                                        AllPlayersAreFull = false;
-                                    end
-                                end
-                            else
-                                if PredictedMissingHealth > healingTargetMissinHealth then
-
-                                    if not UnitHasRenew(unit) then
-                                        healingTarget = unit;
-                                        healingTargetMissinHealth = PredictedMissingHealth;
-                                        AllPlayersAreFull = false;
-                                    end
+                    if noHpCheck then
+                        if PlayerClass == "priest" then
+                            if not UnitHasRenew(unit) then
+                                if PredictedHealthPct < healingTargetHealthPct or healingTargetHealthPct == 1 then
+                                    healingTarget = unit;
+                                    healingTargetHealthPct = PredictedHealthPct;
+                                    AllPlayersAreFull = false;
                                 end
                             end
-                        elseif PlayerClass == "paladin" then
-                            --writeLine("Find who to heal for Paladin")
-                            if healPlayerWithLowestPercentageOfLife == 1 then
+                        elseif PlayerClass == "druid" then
+                            if not UnitHasRejuvenation(unit) then
+                                if PredictedHealthPct < healingTargetHealthPct or healingTargetHealthPct == 1 then
+                                    healingTarget = unit;
+                                    healingTargetHealthPct = PredictedHealthPct;
+                                    AllPlayersAreFull = false;
+                                end
+                            end
+                        else
+                            writeLine(QuickHealData.name .. " " .. QuickHealData.version .. " does not support " .. UnitClass('player') .. ". " .. QuickHealData.name .. " not loaded.")
+                            return ;
+                        end
+                    else
+                        --Get who to heal for different classes
+                        --local IncHeal = HealComm:getHeal(UnitName(unit))
+                        --local PredictedHealth = (UnitHealth(unit) + IncHeal)
+                        --local PredictedHealthPct = (UnitHealth(unit) + IncHeal) / UnitHealthMax(unit);
+                        --local PredictedMissingHealth = UnitHealthMax(unit) - UnitHealth(unit) - IncHeal;
+
+                        if PredictedHealthPct < QHV.RatioFull then
+                            local _, PlayerClass = UnitClass('player');
+                            PlayerClass = string.lower(PlayerClass);
+
+                            if PlayerClass == "shaman" then
                                 if PredictedHealthPct < healingTargetHealthPct then
                                     healingTarget = unit;
                                     healingTargetHealthPct = PredictedHealthPct;
                                     AllPlayersAreFull = false;
                                 end
-                            else
-                                if PredictedHealth < healingTargetHealth then
-                                    healingTarget = unit;
-                                    healingTargetHealth = PredictedHealth;
-                                    AllPlayersAreFull = false;
-                                end
-                            end
-                        elseif PlayerClass == "druid" then
+                            elseif PlayerClass == "priest" then
+                                --writeLine("Find who to heal for Priest");
+                                if healPlayerWithLowestPercentageOfLife == 1 then
+                                    if PredictedHealthPct < healingTargetHealthPct then
+                                        if not UnitHasRenew(unit) then
+                                            healingTarget = unit;
+                                            healingTargetHealthPct = PredictedHealthPct;
+                                            AllPlayersAreFull = false;
+                                        end
+                                    end
+                                else
+                                    if PredictedMissingHealth > healingTargetMissinHealth then
 
-                            if healPlayerWithLowestPercentageOfLife == 1 then
-                                if PredictedHealthPct < healingTargetHealthPct then
-                                    if not UnitHasRejuvenation(unit) then
+                                        if not UnitHasRenew(unit) then
+                                            healingTarget = unit;
+                                            healingTargetMissinHealth = PredictedMissingHealth;
+                                            AllPlayersAreFull = false;
+                                        end
+                                    end
+                                end
+                            elseif PlayerClass == "paladin" then
+                                --writeLine("Find who to heal for Paladin")
+                                if healPlayerWithLowestPercentageOfLife == 1 then
+                                    if PredictedHealthPct < healingTargetHealthPct then
                                         healingTarget = unit;
                                         healingTargetHealthPct = PredictedHealthPct;
                                         AllPlayersAreFull = false;
                                     end
-                                end
-                            else
-                                if PredictedMissingHealth > healingTargetMissinHealth then
-
-                                    if not UnitHasRejuvenation(unit) then
+                                else
+                                    if PredictedHealth < healingTargetHealth then
                                         healingTarget = unit;
-                                        healingTargetMissinHealth = PredictedMissingHealth;
+                                        healingTargetHealth = PredictedHealth;
                                         AllPlayersAreFull = false;
                                     end
                                 end
-                            end
+                            elseif PlayerClass == "druid" then
+                                if healPlayerWithLowestPercentageOfLife == 1 then
+                                    if PredictedHealthPct < healingTargetHealthPct then
+                                        if not UnitHasRejuvenation(unit) then
+                                            healingTarget = unit;
+                                            healingTargetHealthPct = PredictedHealthPct;
+                                            AllPlayersAreFull = false;
+                                        end
+                                    end
+                                else
+                                    if PredictedMissingHealth > healingTargetMissinHealth then
 
-                        else
-                            writeLine(QuickHealData.name .. " " .. QuickHealData.version .. " does not support " .. UnitClass('player') .. ". " .. QuickHealData.name .. " not loaded.")
-                            return ;
+                                        if not UnitHasRejuvenation(unit) then
+                                            healingTarget = unit;
+                                            healingTargetMissinHealth = PredictedMissingHealth;
+                                            AllPlayersAreFull = false;
+                                        end
+                                    end
+                                end
+                            else
+                                writeLine(QuickHealData.name .. " " .. QuickHealData.version .. " does not support " .. UnitClass('player') .. ". " .. QuickHealData.name .. " not loaded.")
+                                return ;
+                            end
                         end
                     end
+
+
 
 
                     --writeLine("Values for "..UnitName(unit)..":")
@@ -2270,6 +2303,8 @@ local function FindWhoToHOT(Restrict, extParam)
             end
         end
     end
+
+
 
     -- Reacquire target if it was cleared earlier, and stop CheckSpell
     SpellStopTargeting();
@@ -2881,7 +2916,7 @@ end
 
 -- HOTs the specified Target with the specified Spell
 -- If parameters are missing they will be determined automatically
-function QuickHOT(Target, SpellID, extParam, forceMaxRank)
+function QuickHOT(Target, SpellID, extParam, forceMaxRank, noHpCheck)
 
     -- Only one instance of QuickHeal allowed at a time
     if QuickHealBusy then
@@ -2979,7 +3014,7 @@ function QuickHOT(Target, SpellID, extParam, forceMaxRank)
         end
     else
         -- Target not specified, determine automatically
-        Target = FindWhoToHOT(Restrict, extParam)
+        Target = FindWhoToHOT(Restrict, extParam, noHpCheck)
         if not Target then
             -- No healing target found
             if Target == false then
@@ -3375,7 +3410,7 @@ local function FindSingleToHOT(playerName)
         end
     end
 
-    QuickHeal_debug("********** Done Scanning for single-target HoT **********");
+    --QuickHeal_debug("********** Done Scanning for single-target HoT **********");
 
     -- Clear any healable target
     local OldPlaySound = PlaySound;
@@ -3387,7 +3422,7 @@ local function FindSingleToHOT(playerName)
         ClearTarget();
     end
 
-    QuickHeal_debug("********** in the middle **********");
+    --QuickHeal_debug("********** in the middle **********");
 
     -- Cast the checkspell
     CastCheckSpellHOT();
@@ -3401,7 +3436,7 @@ local function FindSingleToHOT(playerName)
         return false;
     end
 
-    QuickHeal_debug("********** And then this happens **********");
+    --QuickHeal_debug("********** And then this happens **********");
 
     -- Examine Healable Players
     --for unit, i in playerIds do
@@ -3612,11 +3647,17 @@ function QuickHeal_Command(msg)
     -- match 3 arguments
     if arg1 ~= nil and arg2 ~= nil and arg3 ~= nil then
         if arg1 == "player" or arg1 == "target" or arg1 == "targettarget" or arg1 == "party" or arg1 == "subgroup" or arg1 == "mt" or arg1 == "nonmt" then
-            if arg2 == "hot" and arg3 == "max" then
-                --writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT(max rank)", 0, 1, 0);
-                QuickHOT(arg1, nil, nil, true);
+            if arg2 == "hot" and arg3 == "fh" then
+                writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT(max rank & no hp check)", 0, 1, 0);
+                QuickHOT(arg1, nil, nil, true, true);
                 return;
             end
+            if arg2 == "hot" and arg3 == "max" then
+                writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT(max rank)", 0, 1, 0);
+                QuickHOT(arg1, nil, nil, true, false);
+                return;
+            end
+
             --QuickHeal(cmd);
         end
     end
@@ -3637,15 +3678,21 @@ function QuickHeal_Command(msg)
             end
         end
         if arg4 == "hot" and arg5 == "max" then
-            --writeLine(QuickHealData.name .. " HOT (max rank)", 0, 1, 0);
+            writeLine(QuickHealData.name .. " HOT (max rank)", 0, 1, 0);
             healPlayerWithLowestPercentageOfLife = 1
-            QuickHOT(nil, nil, nil, true);
+            QuickHOT(nil, nil, nil, true, false);
+            return;
+        end
+        if arg4 == "hot" and arg5 == "fh" then
+            writeLine(QuickHealData.name .. " FH (max rank & no hp check)", 0, 1, 0);
+            healPlayerWithLowestPercentageOfLife = 1
+            QuickHOT(nil, nil, nil, true, true);
             return;
         end
         if arg4 == "player" or arg4 == "target" or arg4 == "targettarget" or arg4 == "party" or arg4 == "subgroup" or arg4 == "mt" or arg4 == "nonmt" then
             if arg5 == "hot" then
-                --writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT", 0, 1, 0);
-                QuickHOT(arg1, nil, nil, false);
+                writeLine(QuickHealData.name .. " qh " .. arg1 .. " HOT", 0, 1, 0);
+                QuickHOT(arg1, nil, nil, false, false);
                 return;
             end
         end
@@ -3684,7 +3731,7 @@ function QuickHeal_Command(msg)
     end
 
     if cmd == "hot" then
-        --writeLine(QuickHealData.name .. " HOT", 0, 1, 0);
+        writeLine(QuickHealData.name .. " HOT", 0, 1, 0);
         QuickHOT();
         return;
     end
