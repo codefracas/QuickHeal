@@ -423,3 +423,136 @@ function QuickHeal_Priest_FindHoTSpellToUse(Target, healType, forceMaxRank)
 
     return SpellID,HealSize*HDB;
 end
+
+function QuickHealSpellID(healneed)
+    local SpellID = nil;
+    local HealSize = 0;
+
+    -- +Healing-PenaltyFactor = (1-((20-LevelLearnt)*0.0375)) for all spells learnt before level 20
+    local PF1 = 0.2875;
+    local PF4 = 0.4;
+    local PF10 = 0.625;
+    local PF18 = 0.925;
+
+    -- Determine health and healneed of target
+    --local healneed;
+    --local Health;
+
+    --if QuickHeal_UnitHasHealthInfo(Target) then
+    --    -- Full info available
+    --    healneed = UnitHealthMax(Target) - UnitHealth(Target) - HealComm:getHeal(UnitName(Target)); -- Implementatin for HealComm
+    --
+    --    Health = UnitHealth(Target) / UnitHealthMax(Target);
+    --else
+    --    -- Estimate target health
+    --    healneed = QuickHeal_EstimateUnitHealNeed(Target,true); -- needs HealComm implementation maybe
+    --
+    --    Health = UnitHealth(Target)/100;
+    --end
+
+    -- if BonusScanner is running, get +Healing bonus
+    local Bonus = 0;
+    if (BonusScanner) then
+        Bonus = tonumber(BonusScanner:GetBonus("HEAL"));
+        QuickHeal_debug(string.format("Equipment Healing Bonus: %d", Bonus));
+    end
+
+    -- Spiritual Guidance - Increases spell damage and healing by up to 5% (per rank) of your total Spirit.
+    local _,_,_,_,talentRank,_ = GetTalentInfo(2,14);
+    local _,Spirit,_,_ = UnitStat('player',5);
+    local sgMod = Spirit * 5*talentRank/100;
+    QuickHeal_debug(string.format("Spiritual Guidance Bonus: %f", sgMod));
+
+    -- Calculate healing bonus
+    local healMod15 = (1.5/3.5) * (sgMod + Bonus);
+    local healMod20 = (2.0/3.5) * (sgMod + Bonus);
+    local healMod25 = (2.5/3.5) * (sgMod + Bonus);
+    local healMod30 = (3.0/3.5) * (sgMod + Bonus);
+    QuickHeal_debug("Final Healing Bonus (1.5,2.0,2.5,3.0)", healMod15,healMod20,healMod25,healMod30);
+
+    local InCombat = UnitAffectingCombat('player');
+
+    -- Spiritual Healing - Increases healing by 2% per rank on all spells
+    local _,_,_,_,talentRank,_ = GetTalentInfo(2,15);
+    local shMod = 2*talentRank/100 + 1;
+    QuickHeal_debug(string.format("Spiritual Healing modifier: %f", shMod));
+
+    -- Improved Healing - Decreases mana usage by 5% per rank on LH,H and GH
+    local _,_,_,_,talentRank,_ = GetTalentInfo(2,10);
+    local ihMod = 1 - 5*talentRank/100;
+    QuickHeal_debug(string.format("Improved Healing modifier: %f", ihMod));
+
+    local ManaLeft = UnitMana('player');
+
+    --if TargetIsHealthy then
+    --    QuickHeal_debug("Target is healthy",Health);
+    --end
+
+    -- Detect proc of 'Hand of Edward the Odd' mace (next spell is instant cast)
+    if QuickHeal_DetectBuff('player',"Spell_Holy_SearingLight") then
+        --QuickHeal_debug("BUFF: Hand of Edward the Odd (out of combat healing forced)");
+        InCombat = false;
+    end
+
+    -- Detect Inner Focus or Spirit of Redemption (hack ManaLeft and healneed)
+    if QuickHeal_DetectBuff('player',"Spell_Frost_WindWalkOn",1) or QuickHeal_DetectBuff('player',"Spell_Holy_GreaterHeal") then
+        --QuickHeal_debug("Inner Focus or Spirit of Redemption active");
+        ManaLeft = UnitManaMax('player'); -- Infinite mana
+        healneed = 10^6; -- Deliberate overheal (mana is free)
+    end
+
+    -- Get a list of ranks available for all spells
+    local SpellIDsLH = QuickHeal_GetSpellIDs(QUICKHEAL_SPELL_LESSER_HEAL);
+    local SpellIDsH  = QuickHeal_GetSpellIDs(QUICKHEAL_SPELL_HEAL);
+    local SpellIDsGH = QuickHeal_GetSpellIDs(QUICKHEAL_SPELL_GREATER_HEAL);
+
+    local maxRankLH = table.getn(SpellIDsLH);
+    local maxRankH  = table.getn(SpellIDsH);
+    local maxRankGH = table.getn(SpellIDsGH);
+
+    --QuickHeal_debug(string.format("Found LH up to rank %d, H up top rank %d, GH up to rank %d, FH up to rank %d, and R up to max rank %d", maxRankLH, maxRankH, maxRankGH, maxRankFH, maxRankR));
+
+    -- Compensation for health lost during combat
+    local k=1.0;
+    local K=1.0;
+    if InCombat then
+        k=0.9;
+        K=0.8;
+    end
+
+    -- if healType = channel
+    --jgpprint(healType)
+
+    SpellID = SpellIDsLH[1]; HealSize = 53*shMod+healMod15*PF1; -- Default to LH
+    if healneed > (  84*shMod+healMod20*PF4) *k and ManaLeft >=  45*ihMod and maxRankLH >=2 then SpellID = SpellIDsLH[2]; HealSize =   84*shMod+healMod20*PF4  end
+    if healneed > ( 154*shMod+healMod25*PF10)*K and ManaLeft >=  75*ihMod and maxRankLH >=3 then SpellID = SpellIDsLH[3]; HealSize =  154*shMod+healMod25*PF10 end
+    if healneed > ( 318*shMod+healMod30*PF18)*K and ManaLeft >= 155*ihMod and maxRankH  >=1 then SpellID = SpellIDsH[1] ; HealSize =  318*shMod+healMod30*PF18 end
+    if healneed > ( 460*shMod+healMod30)*K      and ManaLeft >= 205*ihMod and maxRankH  >=2 then SpellID = SpellIDsH[2] ; HealSize =  460*shMod+healMod30      end
+    if healneed > ( 604*shMod+healMod30)*K      and ManaLeft >= 255*ihMod and maxRankH  >=3 then SpellID = SpellIDsH[3] ; HealSize =  604*shMod+healMod30      end
+    if healneed > ( 758*shMod+healMod30)*K      and ManaLeft >= 305*ihMod and maxRankH  >=4 then SpellID = SpellIDsH[4] ; HealSize =  758*shMod+healMod30      end
+    if healneed > ( 956*shMod+healMod30)*K      and ManaLeft >= 370*ihMod and maxRankGH >=1 then SpellID = SpellIDsGH[1]; HealSize =  956*shMod+healMod30      end
+    if healneed > (1219*shMod+healMod30)*K      and ManaLeft >= 455*ihMod and maxRankGH >=2 then SpellID = SpellIDsGH[2]; HealSize = 1219*shMod+healMod30      end
+    if healneed > (1523*shMod+healMod30)*K      and ManaLeft >= 545*ihMod and maxRankGH >=3 then SpellID = SpellIDsGH[3]; HealSize = 1523*shMod+healMod30      end
+    if healneed > (1902*shMod+healMod30)*K      and ManaLeft >= 655*ihMod and maxRankGH >=4 then SpellID = SpellIDsGH[4]; HealSize = 1902*shMod+healMod30      end
+    if healneed > (2080*shMod+healMod30)*K      and ManaLeft >= 710*ihMod and maxRankGH >=5 then SpellID = SpellIDsGH[5]; HealSize = 2080*shMod+healMod30      end
+
+    --return SpellID;
+
+    -- Get spell info
+    local SpellName, SpellRank = GetSpellName(SpellID, BOOKTYPE_SPELL);
+    if SpellRank == "" then
+        SpellRank = nil
+    end
+    local SpellNameAndRank = SpellName .. (SpellRank and " (" .. SpellRank .. ")" or "");
+
+    QuickHeal_debug("  Casting: " .. SpellNameAndRank .. " on " .. " NOPE " .. ", ID: " .. SpellID);
+
+    local s = "Rank13";
+
+    --msg = string.gsub(msg, "^%s*(.-)%s*$", "%1")
+
+    local out = string.gsub(SpellRank,"%a+", "");
+    --QuickHeal_debug("  out: " .. out);
+
+    return SpellName, out;
+end

@@ -6,8 +6,8 @@ HealComm = AceLibrary("HealComm-1.0")
 --[ Mod data ]--
 QuickHealData = {
     name = 'QuickHeal',
-    version = '1.16.1',
-    releaseDate = 'May 8th, 2021',
+    version = '1.17.0',
+    releaseDate = 'July 11th, 2021',
     author = 'T. Thorsen, S. Geeding and K. Karachalios feat. Dispatchio',
     website = 'https://turtle-wow.org/',
     category = MYADDONS_CATEGORY_CLASS
@@ -1319,26 +1319,27 @@ end
 -- Toggle Healthy Threshold
 function QuickHeal_Toggle_Healthy_Threshold()
     local _, PlayerClass = UnitClass('player');
-    --    if string.lower(PlayerClass) == "druid" then
-    --        if QuickHealVariables.RatioHealthyDruid < 1 then
-    --            QuickHealVariables.RatioHealthyDruid = 1
-    --            writeLine("QuickHeal mode: FlashHeal", 0.9, 0.44, 0.05)
-    --        else
-    --            QuickHealVariables.RatioHealthyDruid = 0
-    --            writeLine("QuickHeal mode: Normal", 0.05, 0.07, 0.80)
-    --        end
-    --    return
-    --    end
+
+    if string.lower(PlayerClass) == "druid" then
+        if QuickHealVariables.RatioHealthyDruid < 1 then
+            QuickHealVariables.RatioHealthyDruid = 1
+            writeLine("QuickHeal mode: High HPS", 0.9, 0.44, 0.05)
+        else
+            QuickHealVariables.RatioHealthyDruid = 0
+            writeLine("QuickHeal mode: Normal HPS", 0.05, 0.7, 0.7)
+        end
+        return
+    end
 
     if string.lower(PlayerClass) == "priest" then
         if QuickHealVariables.RatioHealthyPriest < 1 then
             QuickHealVariables.RatioHealthyPriest = 1
-            writeLine("QuickHeal mode: FlashHeal", 0.9, 0.44, 0.05)
+            writeLine("QuickHeal mode: High HPS", 0.9, 0.44, 0.05)
             QuickHealDownrank_MarkerTop:Hide()
             QuickHealDownrank_MarkerBot:Show()
         else
             QuickHealVariables.RatioHealthyPriest = 0
-            writeLine("QuickHeal mode: Normal", 0.05, 0.7, 0.7)
+            writeLine("QuickHeal mode: Normal HPS", 0.05, 0.7, 0.7)
             QuickHealDownrank_MarkerTop:Show()
             QuickHealDownrank_MarkerBot:Hide()
         end
@@ -1348,28 +1349,32 @@ function QuickHeal_Toggle_Healthy_Threshold()
     if string.lower(PlayerClass) == "paladin" then
         if QuickHealVariables.RatioHealthyPaladin < 1 then
             QuickHealVariables.RatioHealthyPaladin = 1
-            writeLine("QuickHeal mode: FlashHeal", 0.9, 0.44, 0.05)
+            writeLine("QuickHeal mode: High HPS", 0.9, 0.44, 0.05)
             QuickHealDownrank_MarkerTop:Hide()
             QuickHealDownrank_MarkerBot:Show()
         else
             QuickHealVariables.RatioHealthyPaladin = 0
-            writeLine("QuickHeal mode: Normal", 0.05, 0.7, 0.7)
+            writeLine("QuickHeal mode: Normal HPS", 0.05, 0.7, 0.7)
             QuickHealDownrank_MarkerTop:Show()
             QuickHealDownrank_MarkerBot:Hide()
         end
         return
     end
 
-    --   if string.lower(PlayerClass) == "shaman" then
-    --       if QuickHealVariables.RatioHealthyShaman < 1 then
-    --           QuickHealVariables.RatioHealthyShaman = 1
-    --           writeLine("QuickHeal mode: FlashHeal", 0.9, 0.44, 0.05)
-    --       else
-    --           QuickHealVariables.RatioHealthyShaman = 0
-    --           writeLine("QuickHeal mode: Normal", 0.05, 0.07, 0.80)
-    --       end
-    --   return
-    --   end
+    if string.lower(PlayerClass) == "shaman" then
+        if QuickHealVariables.RatioHealthyShaman < 1 then
+            QuickHealVariables.RatioHealthyShaman = 1
+            writeLine("QuickHeal mode: High HPS", 0.9, 0.44, 0.05)
+            QuickHealDownrank_MarkerTop:Hide()
+            QuickHealDownrank_MarkerBot:Show()
+        else
+            QuickHealVariables.RatioHealthyShaman = 0
+            writeLine("QuickHeal mode: Normal HPS", 0.05, 0.7, 0.7)
+            QuickHealDownrank_MarkerTop:Show()
+            QuickHealDownrank_MarkerBot:Hide()
+        end
+        return
+    end
 end
 
 
@@ -1632,7 +1637,7 @@ end
 -- SpellCache[spellName][rank][stat]
 -- stat: SpellID, Mana, Heal, Time
 function QuickHeal_GetSpellInfo(spellName)
-    QuickHeal_debug("********** BREAKPOINT: QuickHeal_GetSpellInfo(spellName) BEGIN **********");
+    --QuickHeal_debug("********** BREAKPOINT: QuickHeal_GetSpellInfo(spellName) BEGIN **********");
     -- Check if info is already cached
     if SpellCache[spellName] then
         return SpellCache[spellName];
@@ -1640,7 +1645,7 @@ function QuickHeal_GetSpellInfo(spellName)
 
     SpellCache[spellName] = {};
 
-    QuickHeal_debug("********** BREAKPOINT: QuickHeal_GetSpellInfo(spellName) Mid **********");
+    --QuickHeal_debug("********** BREAKPOINT: QuickHeal_GetSpellInfo(spellName) Mid **********");
 
     -- Gather info (only done if not in cache)
     local i = 1;
@@ -1691,7 +1696,7 @@ function QuickHeal_GetSpellInfo(spellName)
         end
         i = i + 1;
     end
-    QuickHeal_debug("********** BREAKPOINT: QuickHeal_GetSpellInfo(spellName) END **********");
+    --QuickHeal_debug("********** BREAKPOINT: QuickHeal_GetSpellInfo(spellName) END **********");
     return SpellCache[spellName];
 end
 
@@ -1702,6 +1707,7 @@ function QuickHeal_GetSpellIDs(spellName)
 
     while true do
         spellNamei, spellRank = GetSpellName(i, BOOKTYPE_SPELL);
+
         if not spellNamei then
             return List
         end
@@ -1712,6 +1718,7 @@ function QuickHeal_GetSpellIDs(spellName)
             if not spellRank then
                 return i
             end
+            --QuickHeal_debug("HEY >>> spellname: " .. spellNamei .. " spellRank: " .. spellRank);
             List[spellRank] = i;
         end
         i = i + 1;
@@ -1768,9 +1775,10 @@ end
 local function CastCheckSpellHOT()
     local _, class = UnitClass('player');
     class = string.lower(class);
-    QuickHeal_debug("********** BREAKPOINT: CastCheckSpellHOT() **********");
+
+    --QuickHeal_debug("********** BREAKPOINT: CastCheckSpellHOT() **********");
     if class == "druid" then
-        CastSpell(QuickHeal_GetSpellInfo(QUICKHEAL_SPELL_HEALING_TOUCH)[1].SpellID, BOOKTYPE_SPELL);
+        CastSpell(QuickHeal_GetSpellInfo(QUICKHEAL_SPELL_REJUVENATION)[1].SpellID, BOOKTYPE_SPELL);
     --elseif class == "paladin" then
     --    CastSpell(QuickHeal_GetSpellInfo(QUICKHEAL_SPELL_HOLY_LIGHT)[1].SpellID, BOOKTYPE_SPELL);
     elseif class == "priest" then
@@ -1778,7 +1786,7 @@ local function CastCheckSpellHOT()
     --elseif class == "shaman" then
     --    CastSpell(QuickHeal_GetSpellInfo(QUICKHEAL_SPELL_HEALING_WAVE)[1].SpellID, BOOKTYPE_SPELL);
     end
-    QuickHeal_debug("********** BREAKPOINT: CastCheckSpellHOT() done **********");
+    --QuickHeal_debug("********** BREAKPOINT: CastCheckSpellHOT() done **********");
 end
 
 local function FindWhoToHeal(Restrict, extParam)
@@ -3594,7 +3602,7 @@ function QuickHoTSingle(playerName, forceMaxRank)
 
     Target = FindSingleToHOT(playerName);
 
-    QuickHeal_debug("********** BREAKPOINT: Well, we got this far. **********");
+    --QuickHeal_debug("********** BREAKPOINT: Well, we got this far. **********");
     --QuickHeal_debug(string.format("  Healing target grr:  (%s)",  Target));
     QuickHeal_debug(string.format("  Healing target grr: " .. tostring(Target)));
 
@@ -3749,16 +3757,21 @@ function QuickHeal_Command(msg)
     -- Print usage information if arguments do not match
     writeLine(QuickHealData.name .. " Usage:");
     writeLine("/qh cfg - Opens up the configuration panel.");
-    writeLine("/qh toggle - Swiches between only Flashheals and or Normal Heals (Healthy Threshold 0% or 100%).");
+    writeLine("/qh toggle - Switches between High HPS and Normal HPS.  Heals (Healthy Threshold 0% or 100%).");
     writeLine("/qh downrank | dr - Opens the slider to limit QuickHeal to use only lower ranks.");
-    writeLine("/qh [hot] [max] - Heals the party/raid member that most need it with the best suited healing spell.");
-    writeLine("/qh player [hot] [max] - Forces the target of the healing to be yourself.");
-    writeLine("/qh target [hot] [max] - Forces the target of the healing to be your current target.");
-    writeLine("/qh targettarget [hot] [max] - Forces the target of the healing to be your current target's target.");
-    writeLine("/qh party [hot] [max] - Restricts the healing to the party when in a raid.");
-    writeLine("/qh mt [hot] [max] - Restricts the healing to the Main Tanks defined by the Raid Leader in CTRaidAssist or oRA.");
-    writeLine("/qh nonmt [hot] [max] - Restricts the healing to players who are not defined as Main Tanks by the Raid Leader in CTRaidAssist or oRA.");
-    writeLine("/qh subgroup [hot] [max] - Forces the healing to the groups selected in the configuration panel.");
+    writeLine("/qh [mask] [hot] [max] - Heals the party/raid member that most needs it with the best suited healing spell.");
+    writeLine(" [mask] constrains healing pool to:");
+    writeLine("     [player] yourself");
+    writeLine("     [target] your target");
+    writeLine("     [targettarget] your target's target");
+    writeLine("     [party] your party");
+    writeLine("     [mt] main tanks (defined in the configuration panel)");
+    writeLine("     [nonmt] everyone but the main tanks");
+    writeLine("     [subgroup] raid subgroups (defined in the configuration panel)");
+    writeLine(" [hot] (optional) forces the use of a HoT if your class supports it");
+    writeLine(" [mod] (optional) modifies HoT options:");
+    writeLine("     [max] applies maximum rank HoT to subgroup members that have <100% health and no HoTs applied");
+    writeLine("     [fh] applies maximum rank HoT to subgroup members that have no HoTs applied regardless of health status");
     writeLine("/qh reset - Reset configuration to default parameters for all classes.");
-    writeLine("/qh healpct [hot] [max] - Will prioritise the player with the lowest percentage of health.");
+    writeLine("/qh healpct - Will prioritise the player with the lowest percentage of health.  Channeled spells only.");
 end
